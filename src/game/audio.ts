@@ -20,6 +20,7 @@ export function unlockAudio(): void {
   if (!c) return;
   void c.resume();
   unlocked = true;
+  // tiny silent buffer to unlock iOS
   const buf = c.createBuffer(1, 1, 22050);
   const src = c.createBufferSource();
   src.buffer = buf;
@@ -87,6 +88,7 @@ export function sfxReject(): void {
 
 export function sfxClear(lines: number): void {
   const n = Math.min(Math.max(lines, 1), 4);
+  // bubble-blast style cascade
   for (let i = 0; i < n + 2; i++) {
     tone(420 + i * 90, 0.09, "sine", 0.12 - i * 0.015, i * 0.045);
     tone(640 + i * 70, 0.07, "triangle", 0.08, i * 0.045 + 0.02);
