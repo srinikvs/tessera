@@ -75,6 +75,7 @@ interface UndoSnap {
 const POP_DUR = 0.16;
 const CLEAR_FLASH = 0.12;
 const CLEAR_SHRINK = 0.2;
+const END_HOLD = 3;
 
 function easeOutBack(t: number): number {
   const c1 = 1.70158;
@@ -123,8 +124,9 @@ export function createEngine(
   let floaters: Floater[] = [];
   let comboFx: { text: string; t: number } | null = null;
   let pop = new Map<string, number>();
-  let phase: "idle" | "clearing" = "idle";
+  let phase: "idle" | "clearing" | "ending" = "idle";
   let clearT = 0;
+  let endingT = 0;
   let pendingClear: { rows: number[]; cols: number[] } | null = null;
   const dprCap = 2;
 
@@ -141,6 +143,7 @@ export function createEngine(
       canContinue: canContinue(),
       canUndo: !!undo && screen === "play" && phase === "idle" && !drag,
       hint: hint && screen === "play",
+      endProgress: phase === "ending" ? Math.min(1, endingT / END_HOLD) : 0,
     });
   }
 
@@ -187,7 +190,10 @@ export function createEngine(
     if (tray.every((p) => p === null)) refillTray();
     else refreshFits();
     if (!anyRemainingFits(board, tray)) {
-      screen = "over";
+      setDrag(null);
+      phase = "ending";
+      endingT = 0;
+      screen = "ending";
       sfxOver();
       persist();
       emitUi();
@@ -308,6 +314,7 @@ export function createEngine(
     comboFx = null;
     phase = "idle";
     pendingClear = null;
+    endingT = 0;
     setDrag(null);
     tray = [null, null, null];
     refillTray();
@@ -491,6 +498,29 @@ export function createEngine(
       if (clearT >= CLEAR_FLASH + CLEAR_SHRINK) applyClear();
     }
 
+    if (phase === "ending") {
+      endingT += dt;
+      for (const p of particles) {
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 180 * dt;
+      }
+      particles = particles.filter((p) => p.life > 0);
+      for (const f of floaters) f.t += dt;
+      floaters = floaters.filter((f) => f.t < 0.9);
+      // keep React dim in sync (~10fps)
+      if (Math.floor(endingT * 10) !== Math.floor((endingT - dt) * 10)) emitUi();
+      if (endingT >= END_HOLD) {
+        phase = "idle";
+        endingT = 0;
+        screen = "over";
+        persist();
+        emitUi();
+      }
+      return;
+    }
+
     const nextPop = new Map<string, number>();
     for (const [k, t] of pop) {
       const n = t + dt / POP_DUR;
@@ -528,7 +558,7 @@ export function createEngine(
     ctx.save();
     ctx.translate(ox, oy);
 
-    if (screen !== "start") {
+    if (screen !== "start" && screen !== "over") {
       drawBoardFrame(ctx, layout);
       let clearing = null;
       if (phase === "clearing" && pendingClear) {
@@ -584,13 +614,31 @@ export function createEngine(
     }
 
     ctx.restore();
+
+    if (phase === "ending" || screen === "ending") {
+      const p = Math.min(1, endingT / END_HOLD);
+      // ease-in dim so the hold is obvious from the first second
+      const a = p * p * 0.88;
+      ctx.fillStyle = `rgba(12, 13, 16, ${a})`;
+      ctx.fillRect(0, 0, w, h);
+      const textA = Math.min(1, Math.max(0, (p - 0.15) / 0.35));
+      if (textA > 0) {
+        ctx.globalAlpha = textA;
+        ctx.fillStyle = "#f2f1ee";
+        ctx.font = "500 18px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("No more moves", w / 2, h / 2);
+        ctx.globalAlpha = 1;
+      }
+    }
   }
 
   function loop(now: number): void {
     if (!running) return;
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    if (screen === "play") update(dt);
+    if (screen === "play" || screen === "ending") update(dt);
     else {
       trauma = Math.max(0, trauma - dt * 2);
       for (const p of particles) {
@@ -606,7 +654,7 @@ export function createEngine(
 
   function onKey(e: KeyboardEvent): void {
     if (e.key === "Escape") {
-      if (screen === "play") {
+      if (screen === "play" && phase !== "ending") {
         screen = "paused";
         persist();
         emitUi();
@@ -648,7 +696,7 @@ export function createEngine(
     continueGame,
     undo: doUndo,
     pause: () => {
-      if (screen === "play") {
+      if (screen === "play" && phase !== "ending") {
         screen = "paused";
         persist();
         emitUi();
