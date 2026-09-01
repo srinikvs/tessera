@@ -9,7 +9,7 @@ export interface Piece {
   color: number;
 }
 
-export type Screen = "start" | "play" | "paused" | "over";
+export type Screen = "start" | "play" | "paused" | "ending" | "over";
 
 export interface UiState {
   screen: Screen;
@@ -20,6 +20,8 @@ export interface UiState {
   canContinue: boolean;
   canUndo: boolean;
   hint: boolean;
+  /** 0→1 while screen is "ending" */
+  endProgress: number;
 }
 
 export interface PublicEngine {

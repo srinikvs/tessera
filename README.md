@@ -1,4 +1,4 @@
-# Tessera
+# Tessera v1.1
 
 A calm 10×10 block puzzle. Drag polyominoes from the tray onto the board. Completely fill a row or column to clear it. No timer.
 
