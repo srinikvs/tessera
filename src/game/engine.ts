@@ -186,8 +186,10 @@ export function createEngine(
     sfxDeal();
   }
 
-  function afterPlaceResolved(): void {
-    if (tray.every((p) => p === null)) refillTray();
+  function afterPlaceResolved(fromClear = false): void {
+    // Empty tray → new trio. A line clear also fills leftover empty slots
+    // so a round does not stall with missing blocks after a clear.
+    if (tray.every((p) => p === null) || fromClear) refillTray();
     else refreshFits();
     if (!anyRemainingFits(board, tray)) {
       setDrag(null);
@@ -200,6 +202,7 @@ export function createEngine(
       return;
     }
     persist();
+    emitUi();
   }
 
   function spawnParticles(rows: number[], cols: number[]): void {
@@ -241,7 +244,7 @@ export function createEngine(
     }
     pendingClear = null;
     phase = "idle";
-    afterPlaceResolved();
+    afterPlaceResolved(true);
   }
 
   function commitPlace(slot: number, piece: Piece, row: number, col: number): void {
