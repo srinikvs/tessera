@@ -210,7 +210,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1 · 3s end hold</p>
+      <p className="meta">v1.1.1 · refill after line clear</p>
     </div>
   );
 }
@@ -290,7 +290,7 @@ function HowTo() {
   const steps = [
     "Drag a block from the tray onto the board. Blocks cannot be rotated.",
     "Completely filling a row or a column clears it and frees that space.",
-    "Place all three to get a new set. Blocks that cannot fit anywhere turn gray. If every leftover block is gray, the game ends.",
+    "Place all three to get a new set. Clearing a line also fills empty tray slots. Blocks that cannot fit anywhere turn gray. If every leftover block is gray, the game ends.",
   ];
   return (
     <ol className="howto">
