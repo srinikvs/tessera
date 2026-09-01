@@ -12,6 +12,7 @@ const initialUi = (): UiState => ({
   canContinue: false,
   canUndo: false,
   hint: false,
+  endProgress: 0,
 });
 
 function formatScore(n: number): string {
@@ -44,16 +45,22 @@ export function App() {
     };
   }, []);
 
-  const playing = ui.screen === "play";
-  const overlay = ui.screen !== "play";
+  const boardLive = ui.screen === "play" || ui.screen === "ending";
+  const overlay =
+    ui.screen === "start" || ui.screen === "paused" || ui.screen === "over";
 
   return (
     <div className="app">
       <canvas ref={canvasRef} />
 
-      {playing && (
-        <header className="hud">
-          <button type="button" className="title" onClick={() => engineRef.current?.pause()}>
+      {boardLive && (
+        <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`}>
+          <button
+            type="button"
+            className="title"
+            onClick={() => engineRef.current?.pause()}
+            disabled={ui.screen === "ending"}
+          >
             Tessera
           </button>
           <div className="score-wrap">
@@ -66,6 +73,7 @@ export function App() {
               className="icon-btn"
               aria-label={ui.muted ? "Unmute" : "Mute"}
               onClick={() => engineRef.current?.toggleMute()}
+              disabled={ui.screen === "ending"}
             >
               {ui.muted ? "🔇" : "🔊"}
             </button>
@@ -73,7 +81,7 @@ export function App() {
               type="button"
               className="icon-btn"
               aria-label="Undo"
-              disabled={!ui.canUndo}
+              disabled={!ui.canUndo || ui.screen === "ending"}
               onClick={() => engineRef.current?.undo()}
             >
               ↩
@@ -82,6 +90,7 @@ export function App() {
               type="button"
               className="icon-btn"
               aria-label="Pause"
+              disabled={ui.screen === "ending"}
               onClick={() => engineRef.current?.pause()}
             >
               ❚❚
@@ -90,15 +99,27 @@ export function App() {
         </header>
       )}
 
-      {ui.hint && playing && (
+      {ui.hint && ui.screen === "play" && (
         <p className="hint">Drag a block onto the board. A full row or column clears.</p>
       )}
 
-      {playing && (
+      {ui.screen === "play" && (
         <footer className="foot">
           <span>Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
         </footer>
+      )}
+
+      {ui.screen === "ending" && (
+        <div
+          className="end-veil"
+          style={{ opacity: Math.min(1, ui.endProgress * 0.55) }}
+          aria-live="polite"
+        >
+          <p className="end-veil-label" style={{ opacity: Math.min(1, Math.max(0, (ui.endProgress - 0.2) / 0.4)) }}>
+            No more moves
+          </p>
+        </div>
       )}
 
       {overlay && (
@@ -140,7 +161,7 @@ export function App() {
         </div>
       )}
 
-      {playing && confirmNew && (
+      {ui.screen === "play" && confirmNew && (
         <div className="overlay" style={{ background: "rgb(12 13 16 / 95%)" }}>
           <PausePanel
             score={ui.score}
@@ -189,6 +210,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
+      <p className="meta">v1.1 · 3s end hold</p>
     </div>
   );
 }
