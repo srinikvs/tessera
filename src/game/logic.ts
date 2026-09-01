@@ -55,10 +55,9 @@ export function anyFit(board: Board, piece: Piece): boolean {
 }
 
 export function anyRemainingFits(board: Board, tray: Array<Piece | null>): boolean {
-  for (const p of tray) {
-    if (p && anyFit(board, p)) return true;
-  }
-  return false;
+  const remaining = tray.filter((p): p is Piece => p !== null);
+  if (remaining.length === 0) return true;
+  return remaining.some((p) => anyFit(board, p));
 }
 
 export function scoreFor(cells: number, lines: number, combo: number): number {
