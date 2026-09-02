@@ -3,17 +3,22 @@ import { createEngine } from "./game/engine";
 import { loadBest, loadSave } from "./game/save";
 import type { PublicEngine, UiState } from "./game/types";
 
-const initialUi = (): UiState => ({
-  screen: "start",
-  score: 0,
-  best: 0,
-  combo: 0,
-  muted: false,
-  canContinue: false,
-  canUndo: false,
-  hint: false,
-  endProgress: 0,
-});
+const initialUi = (): UiState => {
+  const save = loadSave();
+  const resume =
+    !!save && (save.screen === "play" || save.screen === "paused") && save.score > 0;
+  return {
+    screen: resume ? "play" : "start",
+    score: resume ? save!.score : 0,
+    best: loadBest(),
+    combo: resume ? save!.combo : 0,
+    muted: false,
+    canContinue: resume,
+    canUndo: false,
+    hint: false,
+    endProgress: 0,
+  };
+};
 
 function formatScore(n: number): string {
   return n.toLocaleString("en-US");
@@ -30,7 +35,7 @@ export function App() {
     setUi((s) => ({
       ...s,
       best: loadBest(),
-      canContinue: !!(save && save.screen === "play" && save.score > 0),
+      canContinue: !!(save && (save.screen === "play" || save.screen === "paused") && save.score > 0),
     }));
   }, []);
 
@@ -75,7 +80,7 @@ export function App() {
               onClick={() => engineRef.current?.toggleMute()}
               disabled={ui.screen === "ending"}
             >
-              {ui.muted ? "🔇" : "🔊"}
+              {ui.muted ? "\uD83D\uDD07" : "\uD83D\uDD0A"}
             </button>
             <button
               type="button"
@@ -84,7 +89,7 @@ export function App() {
               disabled={!ui.canUndo || ui.screen === "ending"}
               onClick={() => engineRef.current?.undo()}
             >
-              ↩
+              \u21A9
             </button>
             <button
               type="button"
@@ -93,7 +98,7 @@ export function App() {
               disabled={ui.screen === "ending"}
               onClick={() => engineRef.current?.pause()}
             >
-              ❚❚
+              \u275A\u275A
             </button>
           </div>
         </header>
@@ -106,7 +111,7 @@ export function App() {
       {ui.screen === "play" && (
         <footer className="foot">
           <span>Best {formatScore(ui.best)}</span>
-          {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
+          {ui.combo > 1 ? <span>Combo \u00d7{ui.combo}</span> : <span>No time limit</span>}
         </footer>
       )}
 
@@ -210,7 +215,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.1 · refill after line clear</p>
+      <p className="meta">v1.1.2 \u00b7 new game reset \u00b7 resume on refresh</p>
     </div>
   );
 }
@@ -290,7 +295,7 @@ function HowTo() {
   const steps = [
     "Drag a block from the tray onto the board. Blocks cannot be rotated.",
     "Completely filling a row or a column clears it and frees that space.",
-    "Place all three to get a new set. Clearing a line also fills empty tray slots. Blocks that cannot fit anywhere turn gray. If every leftover block is gray, the game ends.",
+    "Place all three tray pieces to get a new set. Leftover pieces stay after a line clear. Blocks that cannot fit anywhere turn gray. If every leftover block is gray, the game ends.",
   ];
   return (
     <ol className="howto">
