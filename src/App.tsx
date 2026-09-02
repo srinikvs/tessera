@@ -215,7 +215,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.2 · new game reset · resume on refresh</p>
+      <p className="meta">v1.1.5 · tray pieces stay in wells</p>
     </div>
   );
 }
