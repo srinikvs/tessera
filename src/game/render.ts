@@ -31,6 +31,23 @@ export interface Floater {
 }
 
 const TRAY_UNITS = 4;
+const WELL_INSET_X = 8;
+const WELL_INSET_Y = 4;
+const TRAY_PIECE_PAD = 6;
+
+export function slotWell(slot: Layout["slots"][number]): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
+  return {
+    x: slot.x + WELL_INSET_X,
+    y: slot.y + WELL_INSET_Y,
+    w: Math.max(0, slot.w - WELL_INSET_X * 2),
+    h: Math.max(0, slot.h - WELL_INSET_Y * 2),
+  };
+}
 
 export function computeLayout(
   w: number,
@@ -54,7 +71,8 @@ export function computeLayout(
   const boardY = top + Math.floor(slack * 0.35);
   const boardX = Math.round((w - boardPx) / 2);
   const slotY = boardY + boardPx + gutter;
-  const slotH = Math.max(cell * 2, Math.min(trayH, h - bottom - slotY));
+  const maxSlotH = Math.max(8, h - bottom - slotY);
+  const slotH = Math.max(8, Math.min(trayH, maxSlotH));
   const slotW = w / 3;
   const slots = [0, 1, 2].map((i) => ({
     x: i * slotW,
@@ -102,13 +120,21 @@ export function trayPieceRect(
   piece: Piece,
 ): { x: number; y: number; cell: number } {
   const s = layout.slots[slot];
+  const well = slotWell(s);
   const { rows, cols } = pieceBounds(piece.cells);
-  const cell = layout.cell;
+  const availW = Math.max(1, well.w - TRAY_PIECE_PAD * 2);
+  const availH = Math.max(1, well.h - TRAY_PIECE_PAD * 2);
+  // Contain-fit square cells inside the well. Never larger than board cells
+  // so the tray is a scaled-down preview; drag/ghost keep layout.cell.
+  const cell = Math.max(
+    4,
+    Math.min(availW / Math.max(cols, 1), availH / Math.max(rows, 1), layout.cell),
+  );
   const pw = cols * cell;
   const ph = rows * cell;
   return {
-    x: s.x + (s.w - pw) / 2,
-    y: s.y + Math.max(0, (s.h - ph) / 2),
+    x: well.x + (well.w - pw) / 2,
+    y: well.y + (well.h - ph) / 2,
     cell,
   };
 }
@@ -260,18 +286,24 @@ export function drawTraySlots(
 ): void {
   for (let i = 0; i < 3; i++) {
     const s = layout.slots[i];
+    const well = slotWell(s);
     ctx.fillStyle = "rgba(255,255,255,0.03)";
     ctx.beginPath();
-    roundRect(ctx, s.x + 8, s.y + 4, s.w - 16, s.h - 8, 12);
+    roundRect(ctx, well.x, well.y, well.w, well.h, 12);
     ctx.fill();
     const piece = tray[i];
     if (!piece || activeSlot === i) continue;
     const rect = trayPieceRect(layout, i, piece);
     const gray = fits[i] === false;
+    ctx.save();
+    ctx.beginPath();
+    roundRect(ctx, well.x, well.y, well.w, well.h, 12);
+    ctx.clip();
     drawPiece(ctx, piece, rect.x, rect.y, rect.cell, Math.max(1, rect.cell * 0.08), {
       gray,
       alpha: gray ? 0.85 : 1,
     });
+    ctx.restore();
   }
 }
 
