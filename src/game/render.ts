@@ -64,3 +64,334 @@ export function computeLayout(
 
   return { w, h, cell, gap, boardX, boardY, boardPx, slots };
 }
+
+export function cellRect(layout: Layout, r: number, c: number): { x: number; y: number; s: number } {
+  const s = layout.cell - layout.gap;
+  return {
+    x: layout.boardX + c * layout.cell + layout.gap / 2,
+    y: layout.boardY + r * layout.cell + layout.gap / 2,
+    s,
+  };
+}
+
+export function pointerToCell(
+  layout: Layout,
+  x: number,
+  y: number,
+): { r: number; c: number } {
+  const c = Math.floor((x - layout.boardX) / layout.cell);
+  const r = Math.floor((y - layout.boardY) / layout.cell);
+  return { r, c };
+}
+
+function pieceBounds(cells: Shape): { rows: number; cols: number } {
+  let maxR = 0;
+  let maxC = 0;
+  for (const [r, c] of cells) {
+    maxR = Math.max(maxR, r);
+    maxC = Math.max(maxC, c);
+  }
+  return { rows: maxR + 1, cols: maxC + 1 };
+}
+
+export function trayPieceRect(
+  layout: Layout,
+  slot: number,
+  piece: Piece,
+): { x: number; y: number; cell: number } {
+  const s = layout.slots[slot];
+  const { rows, cols } = pieceBounds(piece.cells);
+  const cell = Math.min(s.w / (cols + 0.6), s.h / (rows + 0.6)) * s.scale;
+  const pw = cols * cell;
+  const ph = rows * cell;
+  return {
+    x: s.x + (s.w - pw) / 2,
+    y: s.y + (s.h - ph) / 2,
+    cell,
+  };
+}
+
+function drawTile(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  s: number,
+  color: string,
+  gray = false,
+): void {
+  const fill = gray ? DEAD : color;
+  const hi = gray ? DEAD_HI : lighten(color, 0.18);
+  const lo = gray ? "#4a4c54" : darken(color, 0.18);
+  const r = Math.max(3, s * 0.18);
+  ctx.beginPath();
+  roundRect(ctx, x, y, s, s, r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.beginPath();
+  roundRect(ctx, x + 1, y + 1, s - 2, s * 0.35, r * 0.6);
+  ctx.fillStyle = hi;
+  ctx.globalAlpha = 0.35;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = lo;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  roundRect(ctx, x + 0.5, y + 0.5, s - 1, s - 1, r);
+  ctx.stroke();
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+function lighten(hex: string, amount: number): string {
+  return shade(hex, amount);
+}
+
+function darken(hex: string, amount: number): string {
+  return shade(hex, -amount);
+}
+
+function shade(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255;
+  let g = (n >> 8) & 255;
+  let b = n & 255;
+  r = Math.max(0, Math.min(255, Math.round(r + 255 * amount)));
+  g = Math.max(0, Math.min(255, Math.round(g + 255 * amount)));
+  b = Math.max(0, Math.min(255, Math.round(b + 255 * amount)));
+  return `rgb(${r},${g},${b})`;
+}
+
+export function drawBoardFrame(ctx: CanvasRenderingContext2D, layout: Layout): void {
+  const pad = 10;
+  ctx.fillStyle = SURFACE;
+  ctx.beginPath();
+  roundRect(
+    ctx,
+    layout.boardX - pad,
+    layout.boardY - pad,
+    layout.boardPx + pad * 2,
+    layout.boardPx + pad * 2,
+    12,
+  );
+  ctx.fill();
+  ctx.fillStyle = WELL;
+  ctx.fillRect(layout.boardX, layout.boardY, layout.boardPx, layout.boardPx);
+}
+
+export function drawBoard(
+  ctx: CanvasRenderingContext2D,
+  layout: Layout,
+  board: Board,
+  popScale: Map<string, number>,
+  clearing: { rows: Set<number>; cols: Set<number>; flash: number; scale: number } | null,
+): void {
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const { x, y, s } = cellRect(layout, r, c);
+      ctx.fillStyle = "rgba(255,255,255,0.03)";
+      ctx.fillRect(x, y, s, s);
+      const v = board[r][c];
+      if (!v) continue;
+      const key = `${r},${c}`;
+      const pop = popScale.get(key) ?? 1;
+      let scale = pop;
+      let alpha = 1;
+      if (clearing && (clearing.rows.has(r) || clearing.cols.has(c))) {
+        scale *= clearing.scale;
+        alpha = Math.max(0.05, 1 - clearing.flash * 0.3);
+        ctx.fillStyle = `rgba(255,255,255,${clearing.flash * 0.5})`;
+        ctx.fillRect(x - 1, y - 1, s + 2, s + 2);
+      }
+      const cs = s * scale;
+      const ox = x + (s - cs) / 2;
+      const oy = y + (s - cs) / 2;
+      ctx.globalAlpha = alpha;
+      drawTile(ctx, ox, oy, cs, COLORS[(v - 1) % COLORS.length]);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+export function drawPiece(
+  ctx: CanvasRenderingContext2D,
+  piece: Piece,
+  originX: number,
+  originY: number,
+  cell: number,
+  gap: number,
+  opts: { scale?: number; gray?: boolean; alpha?: number } = {},
+): void {
+  const scale = opts.scale ?? 1;
+  const gray = opts.gray ?? false;
+  const alpha = opts.alpha ?? 1;
+  ctx.globalAlpha = alpha;
+  for (const [dr, dc] of piece.cells) {
+    const s = (cell - gap) * scale;
+    const x = originX + dc * cell + (cell - s) / 2;
+    const y = originY + dr * cell + (cell - s) / 2;
+    drawTile(ctx, x, y, s, COLORS[(piece.color - 1) % COLORS.length], gray);
+  }
+  ctx.globalAlpha = 1;
+}
+
+export function drawTraySlots(
+  ctx: CanvasRenderingContext2D,
+  layout: Layout,
+  tray: Array<Piece | null>,
+  activeSlot: number | null,
+  fits: boolean[],
+): void {
+  for (let i = 0; i < 3; i++) {
+    const s = layout.slots[i];
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    ctx.beginPath();
+    roundRect(ctx, s.x + 8, s.y + 4, s.w - 16, s.h - 8, 12);
+    ctx.fill();
+    const piece = tray[i];
+    if (!piece || activeSlot === i) continue;
+    const rect = trayPieceRect(layout, i, piece);
+    const gray = fits[i] === false;
+    drawPiece(ctx, piece, rect.x, rect.y, rect.cell, Math.max(1, rect.cell * 0.08), {
+      gray,
+      alpha: gray ? 0.85 : 1,
+    });
+  }
+}
+
+export function drawGhost(
+  ctx: CanvasRenderingContext2D,
+  layout: Layout,
+  piece: Piece,
+  row: number,
+  col: number,
+  ok: boolean,
+): void {
+  for (const [dr, dc] of piece.cells) {
+    const r = row + dr;
+    const c = col + dc;
+    if (r < 0 || c < 0 || r >= BOARD_SIZE || c >= BOARD_SIZE) continue;
+    const { x, y, s } = cellRect(layout, r, c);
+    ctx.fillStyle = ok ? GHOST_OK : GHOST_BAD;
+    ctx.beginPath();
+    roundRect(ctx, x, y, s, s, Math.max(3, s * 0.18));
+    ctx.fill();
+  }
+}
+
+export function drawLinePreview(
+  ctx: CanvasRenderingContext2D,
+  layout: Layout,
+  rows: number[],
+  cols: number[],
+): void {
+  ctx.fillStyle = "rgba(242,241,238,0.12)";
+  for (const r of rows) {
+    ctx.fillRect(layout.boardX, layout.boardY + r * layout.cell, layout.boardPx, layout.cell);
+  }
+  for (const c of cols) {
+    ctx.fillRect(layout.boardX + c * layout.cell, layout.boardY, layout.cell, layout.boardPx);
+  }
+}
+
+export function drawDragPiece(
+  ctx: CanvasRenderingContext2D,
+  piece: Piece,
+  px: number,
+  py: number,
+  grabR: number,
+  grabC: number,
+  cell: number,
+  gap: number,
+  gray = false,
+): void {
+  const originX = px - (grabC + 0.5) * cell;
+  const originY = py - (grabR + 0.5) * cell;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.45)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 8;
+  drawPiece(ctx, piece, originX, originY, cell, gap, {
+    scale: 1.04,
+    gray,
+    alpha: gray ? 0.7 : 1,
+  });
+  ctx.restore();
+}
+
+export function hitTrayPiece(
+  layout: Layout,
+  tray: Array<Piece | null>,
+  x: number,
+  y: number,
+): { slot: number; grabR: number; grabC: number } | null {
+  for (let i = 0; i < 3; i++) {
+    const piece = tray[i];
+    if (!piece) continue;
+    const rect = trayPieceRect(layout, i, piece);
+    for (const [dr, dc] of piece.cells) {
+      const tx = rect.x + dc * rect.cell;
+      const ty = rect.y + dr * rect.cell;
+      if (x >= tx && x < tx + rect.cell && y >= ty && y < ty + rect.cell) {
+        return { slot: i, grabR: dr, grabC: dc };
+      }
+    }
+    const s = layout.slots[i];
+    if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) {
+      return { slot: i, grabR: 0, grabC: 0 };
+    }
+  }
+  return null;
+}
+
+export function drawParticles(ctx: CanvasRenderingContext2D, particles: Particle[]): void {
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+export function drawFloaters(ctx: CanvasRenderingContext2D, floaters: Floater[]): void {
+  for (const f of floaters) {
+    const a = 1 - f.t / 0.9;
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = f.color;
+    ctx.font = "600 16px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(f.text, f.x, f.y - f.t * 40);
+  }
+  ctx.globalAlpha = 1;
+}
+
+export function drawCombo(
+  ctx: CanvasRenderingContext2D,
+  layout: Layout,
+  text: string,
+  t: number,
+): void {
+  const a = t < 0.2 ? t / 0.2 : Math.max(0, 1 - (t - 0.6) / 0.55);
+  ctx.globalAlpha = a;
+  ctx.fillStyle = MUTED;
+  ctx.font = "600 22px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(text, layout.boardX + layout.boardPx / 2, layout.boardY - 18);
+  ctx.globalAlpha = 1;
+}
