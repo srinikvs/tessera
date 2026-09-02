@@ -80,7 +80,7 @@ export function App() {
               onClick={() => engineRef.current?.toggleMute()}
               disabled={ui.screen === "ending"}
             >
-              {ui.muted ? "\uD83D\uDD07" : "\uD83D\uDD0A"}
+              {ui.muted ? "🔇" : "🔊"}
             </button>
             <button
               type="button"
@@ -89,7 +89,7 @@ export function App() {
               disabled={!ui.canUndo || ui.screen === "ending"}
               onClick={() => engineRef.current?.undo()}
             >
-              \u21A9
+              ↩
             </button>
             <button
               type="button"
@@ -98,7 +98,7 @@ export function App() {
               disabled={ui.screen === "ending"}
               onClick={() => engineRef.current?.pause()}
             >
-              \u275A\u275A
+              ❚❚
             </button>
           </div>
         </header>
@@ -111,7 +111,7 @@ export function App() {
       {ui.screen === "play" && (
         <footer className="foot">
           <span>Best {formatScore(ui.best)}</span>
-          {ui.combo > 1 ? <span>Combo \u00d7{ui.combo}</span> : <span>No time limit</span>}
+          {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
         </footer>
       )}
 
@@ -215,7 +215,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.2 \u00b7 new game reset \u00b7 resume on refresh</p>
+      <p className="meta">v1.1.2 · new game reset · resume on refresh</p>
     </div>
   );
 }
