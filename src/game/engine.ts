@@ -690,7 +690,7 @@ export function createEngine(
     if (phase === "ending" || screen === "ending") {
       const p = Math.min(1, endingT / END_HOLD);
       const a = p * p * 0.88;
-      ctx.fillStyle = `rgba(12, 13, 16, ${a})`;
+      ctx.fillStyle = `rgba(38, 40, 50, ${a})`;
       ctx.fillRect(0, 0, w, h);
       const textA = Math.min(1, Math.max(0, (p - 0.15) / 0.35));
       if (textA > 0) {

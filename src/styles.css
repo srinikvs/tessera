@@ -1,13 +1,13 @@
 :root {
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
-  --bg: #0c0d10;
-  --surface: #15161b;
-  --surface-2: #1c1e24;
+  --bg: #262832;
+  --surface: #2e303c;
+  --surface-2: #363844;
   --fg: #f2f1ee;
-  --muted: #8b8d96;
+  --muted: #9a9ca6;
   --accent: #d4d7de;
-  --accent-fg: #0c0d10;
+  --accent-fg: #07080b;
   --border: rgb(242 241 238 / 12%);
   --font: "Segoe UI", system-ui, -apple-system, sans-serif;
   --display: Georgia, "Times New Roman", serif;

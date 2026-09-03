@@ -215,7 +215,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.9 · refill tray after a line clear</p>
+      <p className="meta">v1.1.10 · recessed board</p>
     </div>
   );
 }
