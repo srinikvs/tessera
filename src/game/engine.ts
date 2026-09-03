@@ -556,6 +556,16 @@ export function createEngine(
     if (phase === "clearing") {
       clearT += dt;
       if (clearT >= CLEAR_FLASH + CLEAR_SHRINK) applyClear();
+    } else if (
+      screen === "play" &&
+      phase === "idle" &&
+      !drag &&
+      tray.every((p) => p === null)
+    ) {
+      // Never leave a playable round with an empty tray (heal stale saves / missed refill).
+      refillTray();
+      persist();
+      emitUi();
     }
 
     if (phase === "ending") {

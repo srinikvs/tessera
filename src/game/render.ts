@@ -287,10 +287,13 @@ export function drawTraySlots(
   for (let i = 0; i < 3; i++) {
     const s = layout.slots[i];
     const well = slotWell(s);
-    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    ctx.fillStyle = "rgba(255,255,255,0.07)";
     ctx.beginPath();
     roundRect(ctx, well.x, well.y, well.w, well.h, 12);
     ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
     const piece = tray[i];
     if (!piece || activeSlot === i) continue;
     const rect = trayPieceRect(layout, i, piece);
