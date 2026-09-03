@@ -295,6 +295,7 @@ export function createEngine(
     if (hint) {
       hint = false;
       writeHintSeen();
+      resize();
     }
 
     if (lines > 0) {
@@ -433,7 +434,7 @@ export function createEngine(
     const sab = parseFloat(s.getPropertyValue("--sab")) || 0;
     const wide = window.matchMedia("(min-width: 640px)").matches;
     layout = computeLayout(w, h, {
-      top: sat + 58,
+      top: sat + 58 + (hint && screen === "play" && !wide ? 36 : 0),
       bottom: sab + (wide ? 12 : 36),
     });
   }

@@ -149,7 +149,7 @@ html.tessera-drag footer {
   pointer-events: none;
   position: absolute;
   inset-inline: 0;
-  top: 4.5rem;
+  top: max(3.55rem, calc(var(--sat) + 2.55rem));
   z-index: 20;
   padding: 0 1.25rem;
   text-align: center;
@@ -198,6 +198,9 @@ html.tessera-drag footer {
 }
 
 @media (min-width: 640px) {
+  .hint {
+    display: none;
+  }
   .foot {
     display: none;
   }
