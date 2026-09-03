@@ -182,6 +182,7 @@ export function createEngine(
   }
 
   function refillTray(): void {
+    const hadEmpty = tray.some((p) => p === null);
     for (let i = 0; i < 3; i++) {
       if (!tray[i]) tray[i] = pickShape({ n: nextPieceId++ });
     }
@@ -192,7 +193,7 @@ export function createEngine(
       tray = [pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ })];
     }
     refreshFits();
-    sfxDeal();
+    if (hadEmpty) sfxDeal();
   }
 
   function beginEnding(): void {
@@ -309,8 +310,8 @@ export function createEngine(
       }
       trauma = Math.min(1, trauma + 0.15 + lines * 0.08);
       if (lines >= 3 && !reduced) freeze = 0.05;
-      persist();
-      emitUi();
+      afterPlaceResolved(true);
+      if (reduced) applyClear();
     } else {
       sfxPlace();
       afterPlaceResolved();
@@ -421,10 +422,11 @@ export function createEngine(
     if (drag) return;
     const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
     const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
+    const vvH = window.visualViewport?.height;
+    const h = Math.min(canvas.clientHeight, Math.round(vvH ?? canvas.clientHeight));
     if (w < 2 || h < 2) return;
     canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
+    canvas.height = Math.round(canvas.clientHeight * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const s = getComputedStyle(document.documentElement);
     const sat = parseFloat(s.getPropertyValue("--sat")) || 0;
@@ -745,6 +747,8 @@ export function createEngine(
 
   const ro = new ResizeObserver(() => resize());
   ro.observe(canvas);
+  window.visualViewport?.addEventListener("resize", resize);
+  window.visualViewport?.addEventListener("scroll", resize);
   resize();
 
   canvas.addEventListener("pointerdown", onPointerDown, { passive: false });
@@ -788,6 +792,8 @@ export function createEngine(
       running = false;
       cancelAnimationFrame(raf);
       ro.disconnect();
+      window.visualViewport?.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("scroll", resize);
       setDrag(null);
       canvas.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);

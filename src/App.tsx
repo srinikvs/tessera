@@ -215,7 +215,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.7 · refill tray after a line clear</p>
+      <p className="meta">v1.1.8 · new blocks on line clear</p>
     </div>
   );
 }
