@@ -7,11 +7,12 @@ export const COLORS = [
   "#7a9e6a",
 ];
 
-export const BG = "#0c0d10";
-export const SURFACE = "#15161b";
-export const WELL = "#101116";
+export const BG = "#262832";
+export const SURFACE = "#2e303c";
+export const FRAME = "#101117";
+export const WELL = "#07080b";
 export const FG = "#f2f1ee";
-export const MUTED = "#8b8d96";
+export const MUTED = "#9a9ca6";
 export const DEAD = "#6b6e78";
 export const DEAD_HI = "#8a8d96";
 export const GHOST_OK = "rgba(106,163,106,0.42)";

@@ -1,5 +1,5 @@
 import { BOARD_SIZE, type Board, type Piece, type Shape } from "./types";
-import { COLORS, DEAD, DEAD_HI, GHOST_BAD, GHOST_OK, MUTED, SURFACE, WELL } from "./theme";
+import { COLORS, DEAD, DEAD_HI, FRAME, GHOST_BAD, GHOST_OK, MUTED, WELL } from "./theme";
 
 export interface Layout {
   w: number;
@@ -206,7 +206,7 @@ function shade(hex: string, amount: number): string {
 
 export function drawBoardFrame(ctx: CanvasRenderingContext2D, layout: Layout): void {
   const pad = 10;
-  ctx.fillStyle = SURFACE;
+  ctx.fillStyle = FRAME;
   ctx.beginPath();
   roundRect(
     ctx,
@@ -217,8 +217,13 @@ export function drawBoardFrame(ctx: CanvasRenderingContext2D, layout: Layout): v
     12,
   );
   ctx.fill();
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 3;
   ctx.fillStyle = WELL;
   ctx.fillRect(layout.boardX, layout.boardY, layout.boardPx, layout.boardPx);
+  ctx.restore();
 }
 
 export function drawBoard(
@@ -287,10 +292,13 @@ export function drawTraySlots(
   for (let i = 0; i < 3; i++) {
     const s = layout.slots[i];
     const well = slotWell(s);
-    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
     ctx.beginPath();
-    roundRect(ctx, well.x, well.y, well.w, well.h, 12);
+    roundRect(ctx, well.x, well.y, well.w, well.h, 14);
     ctx.fill();
+    ctx.strokeStyle = "rgba(242,241,238,0.18)";
+    ctx.lineWidth = 1.25;
+    ctx.stroke();
     const piece = tray[i];
     if (!piece || activeSlot === i) continue;
     const rect = trayPieceRect(layout, i, piece);

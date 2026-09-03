@@ -182,6 +182,7 @@ export function createEngine(
   }
 
   function refillTray(): void {
+    const hadEmpty = tray.some((p) => p === null);
     for (let i = 0; i < 3; i++) {
       if (!tray[i]) tray[i] = pickShape({ n: nextPieceId++ });
     }
@@ -192,7 +193,7 @@ export function createEngine(
       tray = [pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ })];
     }
     refreshFits();
-    sfxDeal();
+    if (hadEmpty) sfxDeal();
   }
 
   function beginEnding(): void {
@@ -294,6 +295,7 @@ export function createEngine(
     if (hint) {
       hint = false;
       writeHintSeen();
+      resize();
     }
 
     if (lines > 0) {
@@ -309,8 +311,8 @@ export function createEngine(
       }
       trauma = Math.min(1, trauma + 0.15 + lines * 0.08);
       if (lines >= 3 && !reduced) freeze = 0.05;
-      persist();
-      emitUi();
+      afterPlaceResolved(true);
+      if (reduced) applyClear();
     } else {
       sfxPlace();
       afterPlaceResolved();
@@ -421,17 +423,18 @@ export function createEngine(
     if (drag) return;
     const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
     const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
+    const vvH = window.visualViewport?.height;
+    const h = Math.min(canvas.clientHeight, Math.round(vvH ?? canvas.clientHeight));
     if (w < 2 || h < 2) return;
     canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
+    canvas.height = Math.round(canvas.clientHeight * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const s = getComputedStyle(document.documentElement);
     const sat = parseFloat(s.getPropertyValue("--sat")) || 0;
     const sab = parseFloat(s.getPropertyValue("--sab")) || 0;
     const wide = window.matchMedia("(min-width: 640px)").matches;
     layout = computeLayout(w, h, {
-      top: sat + 58,
+      top: sat + 58 + (hint && screen === "play" && !wide ? 36 : 0),
       bottom: sab + (wide ? 12 : 36),
     });
   }
@@ -556,6 +559,16 @@ export function createEngine(
     if (phase === "clearing") {
       clearT += dt;
       if (clearT >= CLEAR_FLASH + CLEAR_SHRINK) applyClear();
+    } else if (
+      screen === "play" &&
+      phase === "idle" &&
+      !drag &&
+      tray.every((p) => p === null)
+    ) {
+      // Never leave a playable round with an empty tray (heal stale saves / missed refill).
+      refillTray();
+      persist();
+      emitUi();
     }
 
     if (phase === "ending") {
@@ -677,7 +690,7 @@ export function createEngine(
     if (phase === "ending" || screen === "ending") {
       const p = Math.min(1, endingT / END_HOLD);
       const a = p * p * 0.88;
-      ctx.fillStyle = `rgba(12, 13, 16, ${a})`;
+      ctx.fillStyle = `rgba(38, 40, 50, ${a})`;
       ctx.fillRect(0, 0, w, h);
       const textA = Math.min(1, Math.max(0, (p - 0.15) / 0.35));
       if (textA > 0) {
@@ -735,6 +748,8 @@ export function createEngine(
 
   const ro = new ResizeObserver(() => resize());
   ro.observe(canvas);
+  window.visualViewport?.addEventListener("resize", resize);
+  window.visualViewport?.addEventListener("scroll", resize);
   resize();
 
   canvas.addEventListener("pointerdown", onPointerDown, { passive: false });
@@ -778,6 +793,8 @@ export function createEngine(
       running = false;
       cancelAnimationFrame(raf);
       ro.disconnect();
+      window.visualViewport?.removeEventListener("resize", resize);
+      window.visualViewport?.removeEventListener("scroll", resize);
       setDrag(null);
       canvas.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
