@@ -211,8 +211,10 @@ export function createEngine(
     return true;
   }
 
-  function afterPlaceResolved(): void {
-    if (tray.every((p) => p === null)) refillTray();
+  function afterPlaceResolved(fromClear = false): void {
+    // Empty tray → new trio. A line clear also fills leftover empty slots
+    // so a round does not stall with missing blocks after a clear.
+    if (tray.every((p) => p === null) || fromClear) refillTray();
     else refreshFits();
     persist();
     emitUi();
@@ -253,10 +255,7 @@ export function createEngine(
     board = applyLineClear(board, pendingClear.rows, pendingClear.cols);
     pendingClear = null;
     phase = "idle";
-    refreshFits();
-    persist();
-    emitUi();
-    checkGameOver();
+    afterPlaceResolved(true);
   }
 
   function commitPlace(slot: number, piece: Piece, row: number, col: number): void {
@@ -310,10 +309,12 @@ export function createEngine(
       }
       trauma = Math.min(1, trauma + 0.15 + lines * 0.08);
       if (lines >= 3 && !reduced) freeze = 0.05;
+      persist();
+      emitUi();
     } else {
       sfxPlace();
+      afterPlaceResolved();
     }
-    afterPlaceResolved();
   }
 
   function resetSession(): void {
