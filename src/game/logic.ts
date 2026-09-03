@@ -54,10 +54,27 @@ export function anyFit(board: Board, piece: Piece): boolean {
   return false;
 }
 
+export function applyLineClear(board: Board, rows: number[], cols: number[]): Board {
+  const next = cloneBoard(board);
+  const rowSet = new Set(rows);
+  const colSet = new Set(cols);
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (rowSet.has(r) || colSet.has(c)) next[r][c] = 0;
+    }
+  }
+  return next;
+}
+
 export function anyRemainingFits(board: Board, tray: Array<Piece | null>): boolean {
   const remaining = tray.filter((p): p is Piece => p !== null);
   if (remaining.length === 0) return true;
   return remaining.some((p) => anyFit(board, p));
+}
+
+export function hasProgress(board: Board, score: number): boolean {
+  if (score > 0) return true;
+  return board.some((row) => row.some((v) => v !== 0));
 }
 
 export function scoreFor(cells: number, lines: number, combo: number): number {

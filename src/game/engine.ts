@@ -1,11 +1,13 @@
 import {
   anyFit,
   anyRemainingFits,
+  applyLineClear,
   canPlace,
   cloneBoard,
   comboLabel,
   emptyBoard,
   findFullLines,
+  hasProgress,
   placeOn,
   scoreFor,
 } from "./logic";
@@ -148,37 +150,44 @@ export function createEngine(
   }
 
   function canContinue(): boolean {
-    if (screen === "play") return score > 0;
+    if (screen === "play" || screen === "paused") return score > 0;
     const s = loadSave();
-    return !!(s && s.screen === "play" && s.score > 0);
+    return !!(s && (s.screen === "play" || s.screen === "paused") && s.score > 0);
   }
 
   function persist(): void {
     if (screen === "start") return;
     writeSave(
       snapshotSave({
-        board,
+        board: logicalBoard(),
         tray,
         score,
         combo,
         best,
         nextPieceId,
-        screen,
+        screen:
+          screen === "ending" || screen === "over" ? "over" : screen === "paused" ? "paused" : "play",
       }),
     );
   }
 
+  function logicalBoard(): Board {
+    if (pendingClear) return applyLineClear(board, pendingClear.rows, pendingClear.cols);
+    return board;
+  }
+
   function refreshFits(): void {
-    trayFits = tray.map((p) => (p ? anyFit(board, p) : true));
+    const fitBoard = logicalBoard();
+    trayFits = tray.map((p) => (p ? anyFit(fitBoard, p) : true));
   }
 
   function refillTray(): void {
     for (let i = 0; i < 3; i++) {
       if (!tray[i]) tray[i] = pickShape({ n: nextPieceId++ });
     }
-    // ensure at least one placeable when board is empty-ish
+    const fitBoard = logicalBoard();
     for (let attempt = 0; attempt < 10; attempt++) {
-      refreshFits();
+      trayFits = tray.map((p) => (p ? anyFit(fitBoard, p) : true));
       if (trayFits.some((f, i) => tray[i] && f)) break;
       tray = [pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ })];
     }
@@ -186,23 +195,31 @@ export function createEngine(
     sfxDeal();
   }
 
+  function beginEnding(): void {
+    setDrag(null);
+    phase = "ending";
+    endingT = 0;
+    screen = "ending";
+    sfxOver();
+    persist();
+    emitUi();
+  }
+
+  function checkGameOver(): boolean {
+    if (anyRemainingFits(logicalBoard(), tray)) return false;
+    beginEnding();
+    return true;
+  }
+
   function afterPlaceResolved(fromClear = false): void {
     // Empty tray → new trio. A line clear also fills leftover empty slots
     // so a round does not stall with missing blocks after a clear.
     if (tray.every((p) => p === null) || fromClear) refillTray();
     else refreshFits();
-    if (!anyRemainingFits(board, tray)) {
-      setDrag(null);
-      phase = "ending";
-      endingT = 0;
-      screen = "ending";
-      sfxOver();
-      persist();
-      emitUi();
-      return;
-    }
     persist();
     emitUi();
+    if (phase === "clearing") return;
+    checkGameOver();
   }
 
   function spawnParticles(rows: number[], cols: number[]): void {
@@ -235,13 +252,7 @@ export function createEngine(
 
   function applyClear(): void {
     if (!pendingClear) return;
-    const rowSet = new Set(pendingClear.rows);
-    const colSet = new Set(pendingClear.cols);
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      for (let c = 0; c < BOARD_SIZE; c++) {
-        if (rowSet.has(r) || colSet.has(c)) board[r][c] = 0;
-      }
-    }
+    board = applyLineClear(board, pendingClear.rows, pendingClear.cols);
     pendingClear = null;
     phase = "idle";
     afterPlaceResolved(true);
@@ -298,18 +309,15 @@ export function createEngine(
       }
       trauma = Math.min(1, trauma + 0.15 + lines * 0.08);
       if (lines >= 3 && !reduced) freeze = 0.05;
+      persist();
+      emitUi();
     } else {
       sfxPlace();
       afterPlaceResolved();
     }
-    emitUi();
   }
 
-  function newGame(): void {
-    unlockAudio();
-    board = emptyBoard();
-    score = 0;
-    combo = 0;
+  function resetSession(): void {
     undo = null;
     pop.clear();
     particles = [];
@@ -318,34 +326,83 @@ export function createEngine(
     phase = "idle";
     pendingClear = null;
     endingT = 0;
+    clearT = 0;
+    trauma = 0;
+    freeze = 0;
     setDrag(null);
+  }
+
+  function newGame(): void {
+    unlockAudio();
+    resetSession();
+    board = emptyBoard();
+    score = 0;
+    combo = 0;
+    nextPieceId = 1;
     tray = [null, null, null];
+    trayFits = [true, true, true];
+    screen = "play";
     refillTray();
+    persist();
+    resize();
+    emitUi();
+  }
+
+  function restoreSave(s: NonNullable<ReturnType<typeof loadSave>>): boolean {
+    board = s.board.map((row) => row.slice());
+    const id = { n: s.nextPieceId || 1 };
+    tray = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
+    while (tray.length < 3) tray.push(null);
+    tray = tray.slice(0, 3);
+    nextPieceId = id.n;
+    score = s.score || 0;
+    combo = s.combo || 0;
+    best = Math.max(best, s.best || 0);
+    resetSession();
+    if (tray.every((p) => p === null)) refillTray();
+    else refreshFits();
     screen = "play";
     persist();
+    resize();
     emitUi();
+    return true;
   }
 
   function continueGame(): void {
     unlockAudio();
     const s = loadSave();
-    if (!s || s.screen !== "play") {
+    if (!s || (s.screen !== "play" && s.screen !== "paused") || !hasProgress(s.board || emptyBoard(), s.score || 0)) {
       newGame();
       return;
     }
-    board = s.board.map((row) => row.slice());
-    const id = { n: s.nextPieceId || 1 };
-    tray = trayFromSave(s.tray, id);
-    nextPieceId = id.n;
-    score = s.score;
-    combo = s.combo;
-    best = Math.max(best, s.best);
-    if (tray.every((p) => p === null)) refillTray();
-    else refreshFits();
-    screen = "play";
-    undo = null;
+    restoreSave(s);
+  }
+
+  function wantsPlayPath(): boolean {
+    try {
+      const path = window.location.pathname.replace(/\/+$/, "");
+      return path.endsWith("/play");
+    } catch {
+      return false;
+    }
+  }
+
+  function boot(): void {
+    const s = loadSave();
+    const playable =
+      !!s &&
+      (s.screen === "play" || s.screen === "paused") &&
+      hasProgress(s.board || emptyBoard(), s.score || 0);
+    if (playable) {
+      restoreSave(s!);
+      return;
+    }
+    if (wantsPlayPath()) {
+      newGame();
+      return;
+    }
+    screen = "start";
     emitUi();
-    persist();
   }
 
   function doUndo(): void {
@@ -512,7 +569,6 @@ export function createEngine(
       particles = particles.filter((p) => p.life > 0);
       for (const f of floaters) f.t += dt;
       floaters = floaters.filter((f) => f.t < 0.9);
-      // keep React dim in sync (~10fps)
       if (Math.floor(endingT * 10) !== Math.floor((endingT - dt) * 10)) emitUi();
       if (endingT >= END_HOLD) {
         phase = "idle";
@@ -620,7 +676,6 @@ export function createEngine(
 
     if (phase === "ending" || screen === "ending") {
       const p = Math.min(1, endingT / END_HOLD);
-      // ease-in dim so the hold is obvious from the first second
       const a = p * p * 0.88;
       ctx.fillStyle = `rgba(12, 13, 16, ${a})`;
       ctx.fillRect(0, 0, w, h);
@@ -692,7 +747,7 @@ export function createEngine(
   document.addEventListener("visibilitychange", onVis);
 
   raf = requestAnimationFrame(loop);
-  emitUi();
+  boot();
 
   return {
     newGame,
