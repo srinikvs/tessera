@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./styles.css";
 
-const BUILD = "1.1.13";
+const BUILD = "1.1.14";
 const BUILD_KEY = "tessera-asset-v";
 
 async function bustStaleAssets(): Promise<void> {

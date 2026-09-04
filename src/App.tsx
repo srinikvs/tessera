@@ -242,7 +242,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.13 · tray wells stay on screen</p>
+      <p className="meta">v1.1.14 · persist then repaint tray</p>
     </div>
   );
 }

@@ -322,8 +322,38 @@ export function createEngine(
     phase = "idle";
     ensurePlayTray(true);
     persist();
-    emitUi();
+    repaintFromSave();
     checkGameOver();
+  }
+
+  function repaintFromSave(): void {
+    const kept = {
+      score,
+      combo,
+      best,
+      tray: tray.map((p) => (pieceOk(p) ? { ...p, cells: p.cells.map(([a, b]) => [a, b] as [number, number]) } : null)),
+    };
+    const s = loadSave();
+    if (s && Array.isArray(s.board) && s.board.length === 10) {
+      board = s.board.map((row) => row.slice());
+      score = Math.max(kept.score, s.score || 0);
+      combo = Math.max(kept.combo, s.combo || 0);
+      best = Math.max(kept.best, s.best || 0);
+      const id = { n: Math.max(nextPieceId, s.nextPieceId || 1) };
+      const loaded = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
+      padTray();
+      const loadedN = loaded.filter(pieceOk).length;
+      const keptN = kept.tray.filter(pieceOk).length;
+      tray = loadedN >= keptN ? loaded : kept.tray;
+      nextPieceId = id.n;
+    }
+    screen = "play";
+    phase = "idle";
+    pendingClear = null;
+    setDrag(null);
+    ensurePlayTray(true);
+    persist();
+    emitUi();
   }
 
   function commitPlace(slot: number, piece: Piece, row: number, col: number): void {
