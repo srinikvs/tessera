@@ -11,6 +11,11 @@ export interface Piece {
 
 export type Screen = "start" | "play" | "paused" | "ending" | "over";
 
+export interface TrayView {
+  cells: Array<[number, number]>;
+  color: number;
+}
+
 export interface UiState {
   screen: Screen;
   score: number;
@@ -22,6 +27,10 @@ export interface UiState {
   hint: boolean;
   /** 0→1 while screen is "ending" */
   endProgress: number;
+  tray: Array<TrayView | null>;
+  trayFits: boolean[];
+  draggingSlot: number | null;
+  trayCell: number;
 }
 
 export interface PublicEngine {
@@ -31,5 +40,6 @@ export interface PublicEngine {
   pause: () => void;
   resume: () => void;
   toggleMute: () => void;
+  beginTrayDrag: (slot: number, e: { clientX: number; clientY: number; pointerId: number; pointerType: string }) => void;
   destroy: () => void;
 }
