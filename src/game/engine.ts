@@ -193,6 +193,7 @@ export function createEngine(
   }
 
   let fillAfterClear = false;
+  let leftoverSlots: number[] = [];
 
   function pieceOk(p: Piece | null): p is Piece {
     return !!p && Array.isArray(p.cells) && p.cells.length > 0;
@@ -202,6 +203,28 @@ export function createEngine(
     if (!Array.isArray(tray)) tray = [null, null, null];
     while (tray.length < 3) tray.push(null);
     if (tray.length > 3) tray = tray.slice(0, 3);
+  }
+
+  function trayPlaceable(): boolean {
+    const b = logicalBoard();
+    try {
+      return tray.some((p) => pieceOk(p) && anyFit(b, p));
+    } catch {
+      return false;
+    }
+  }
+
+  function dealFitting(): Piece {
+    const b = logicalBoard();
+    for (let i = 0; i < 48; i++) {
+      const p = pickShape({ n: nextPieceId++ });
+      try {
+        if (anyFit(b, p)) return p;
+      } catch {
+        /* try another */
+      }
+    }
+    return { id: nextPieceId++, color: 1, cells: [[0, 0]] };
   }
 
   function fillEmptySlots(): boolean {
@@ -217,17 +240,15 @@ export function createEngine(
       refreshFits();
       return false;
     }
-    const deal = (): Piece => pickShape({ n: nextPieceId++ });
-    for (const i of emptyIdx) tray[i] = deal();
-    const fitBoard = logicalBoard();
-    for (let attempt = 0; attempt < 12; attempt++) {
-      try {
-        trayFits = tray.map((p) => (pieceOk(p) ? anyFit(fitBoard, p) : true));
-      } catch {
-        trayFits = [true, true, true];
-      }
-      if (trayFits.some((f, i) => pieceOk(tray[i]) && f)) break;
-      for (const i of emptyIdx) tray[i] = deal();
+    for (const i of emptyIdx) {
+      const next = [...tray];
+      next[i] = dealFitting();
+      tray = next;
+    }
+    if (!trayPlaceable()) {
+      const next = [...tray];
+      for (const i of emptyIdx) next[i] = dealFitting();
+      tray = next;
     }
     refreshFits();
     try {
@@ -238,16 +259,33 @@ export function createEngine(
     return true;
   }
 
+  function finishClearTray(): void {
+    fillAfterClear = true;
+    padTray();
+    if (tray.every((p) => !pieceOk(p))) {
+      leftoverSlots = [];
+      tray = [dealFitting(), dealFitting(), dealFitting()];
+    } else {
+      fillEmptySlots();
+    }
+    if (!trayPlaceable()) {
+      tray = [0, 1, 2].map((i) =>
+        leftoverSlots.includes(i) && pieceOk(tray[i]) ? tray[i] : dealFitting(),
+      );
+    }
+    refreshFits();
+    if (tray.every(pieceOk) && trayPlaceable()) fillAfterClear = false;
+    emitUi();
+  }
+
   function ensurePlayTray(fromClear: boolean): void {
     if (fromClear) fillAfterClear = true;
     if (screen !== "play" && screen !== "ending" && screen !== "paused") return;
     padTray();
     const must =
       fillAfterClear || pendingClear !== null || phase === "clearing" || tray.every((p) => !pieceOk(p));
-    if (must) {
-      if (fillEmptySlots()) emitUi();
-    } else refreshFits();
-    if (tray.every(pieceOk) && !pendingClear && phase !== "clearing") fillAfterClear = false;
+    if (must) finishClearTray();
+    else refreshFits();
   }
 
   function refillTray(): void {
@@ -320,7 +358,7 @@ export function createEngine(
     board = applyLineClear(board, pendingClear.rows, pendingClear.cols);
     pendingClear = null;
     phase = "idle";
-    ensurePlayTray(true);
+    finishClearTray();
     persist();
     repaintFromSave();
     checkGameOver();
@@ -351,7 +389,7 @@ export function createEngine(
     phase = "idle";
     pendingClear = null;
     setDrag(null);
-    ensurePlayTray(true);
+    finishClearTray();
     persist();
     emitUi();
   }
@@ -365,6 +403,7 @@ export function createEngine(
     };
     board = placeOn(board, piece, row, col);
     tray[slot] = null;
+    leftoverSlots = [0, 1, 2].filter((i) => pieceOk(tray[i]));
     for (const [dr, dc] of piece.cells) {
       pop.set(`${row + dr},${col + dc}`, 0);
     }
