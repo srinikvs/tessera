@@ -248,7 +248,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.24 · Fraunces and Outfit</p>
+      <p className="meta">v1.1.19</p>
     </div>
   );
 }
