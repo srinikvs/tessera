@@ -1,6 +1,7 @@
 :root {
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
+  --tray-lift: max(1.5rem, calc(var(--sab) + 0.9rem));
   --bg: #0c0d10;
   --surface: #16171c;
   --surface-2: #1c1d24;
@@ -194,7 +195,7 @@ html.tessera-drag footer {
   pointer-events: none;
   position: absolute;
   inset-inline: 0;
-  bottom: calc(7.25rem + var(--sab));
+  bottom: calc(var(--tray-lift) + 5.25rem);
   z-index: 20;
   display: flex;
   justify-content: center;
@@ -212,7 +213,7 @@ html.tessera-drag footer {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 0.75rem;
-  padding: 0.15rem 1.1rem max(0.45rem, var(--sab));
+  padding: 0.35rem 1.1rem var(--tray-lift);
   pointer-events: auto;
   align-items: center;
 }

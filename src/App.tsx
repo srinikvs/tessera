@@ -248,7 +248,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.19</p>
+      <p className="meta">v1.1.20</p>
     </div>
   );
 }
