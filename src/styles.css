@@ -1,7 +1,7 @@
 :root {
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
-  --tray-lift: max(1.5rem, calc(var(--sab) + 0.9rem));
+  --tray-lift: max(3.5rem, calc(var(--sab) + 2rem));
   --bg: #0c0d10;
   --surface: #16171c;
   --surface-2: #1c1d24;
@@ -24,7 +24,9 @@ html,
 body,
 #root {
   margin: 0;
-  min-height: 100dvh;
+  height: 100%;
+  max-height: 100svh;
+  min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font);
@@ -61,7 +63,8 @@ html.tessera-drag footer {
 .app {
   position: relative;
   height: 100dvh;
-  min-height: 100dvh;
+  max-height: 100svh;
+  min-height: 100svh;
   overflow: hidden;
   user-select: none;
   background: var(--bg);
