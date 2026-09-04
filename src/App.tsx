@@ -72,9 +72,15 @@ export function App() {
           >
             Tessera
           </button>
-          <div className="score-wrap">
-            <span className="label">Score</span>
-            <span className="score">{formatScore(ui.score)}</span>
+          <div className="hud-stats">
+            <div className="score-wrap">
+              <span className="label">Best</span>
+              <span className="score">{formatScore(ui.best)}</span>
+            </div>
+            <div className="score-wrap">
+              <span className="label">Score</span>
+              <span className="score">{formatScore(ui.score)}</span>
+            </div>
           </div>
           <div className="actions">
             <button
@@ -114,7 +120,6 @@ export function App() {
 
       {ui.screen === "play" && (
         <footer className="foot">
-          <span>Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
         </footer>
       )}
@@ -242,7 +247,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.18 · tray tiles match the board</p>
+      <p className="meta">v1.1.19 · grok.me layout</p>
     </div>
   );
 }

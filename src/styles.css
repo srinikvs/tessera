@@ -9,8 +9,8 @@
   --accent: #d4d7de;
   --accent-fg: #07080b;
   --border: rgb(242 241 238 / 12%);
-  --font: "Segoe UI", system-ui, -apple-system, sans-serif;
-  --display: Georgia, "Times New Roman", serif;
+  --font: "Outfit", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
 *,
@@ -95,9 +95,16 @@ html.tessera-drag footer {
   letter-spacing: -0.02em;
 }
 
-.hud .score-wrap {
+.hud-stats {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.hud .score-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -149,7 +156,7 @@ html.tessera-drag footer {
   pointer-events: none;
   position: absolute;
   inset-inline: 0;
-  top: max(3.55rem, calc(var(--sat) + 2.55rem));
+  top: max(4.35rem, calc(var(--sat) + 3.35rem));
   z-index: 20;
   padding: 0 1.25rem;
   text-align: center;
@@ -190,7 +197,7 @@ html.tessera-drag footer {
   bottom: calc(7.25rem + var(--sab));
   z-index: 20;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 0.25rem 1.25rem 0;
   font-size: 0.75rem;
@@ -216,8 +223,8 @@ html.tessera-drag footer {
   height: 22vw;
   max-height: 7.5rem;
   border-radius: 14px;
-  border: 1.25px solid rgba(242, 241, 238, 0.18);
-  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
