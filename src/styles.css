@@ -1,9 +1,9 @@
 :root {
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
-  --bg: #262832;
-  --surface: #2e303c;
-  --surface-2: #363844;
+  --bg: #0c0d10;
+  --surface: #16171c;
+  --surface-2: #1c1d24;
   --fg: #f2f1ee;
   --muted: #9a9ca6;
   --accent: #d4d7de;

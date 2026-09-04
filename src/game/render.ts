@@ -1,5 +1,5 @@
 import { BOARD_SIZE, type Board, type Piece, type Shape } from "./types";
-import { COLORS, DEAD, DEAD_HI, FRAME, MUTED, WELL } from "./theme";
+import { CELL_WELL, COLORS, DEAD, DEAD_HI, FRAME, MUTED, WELL } from "./theme";
 
 export interface Layout {
   w: number;
@@ -204,7 +204,7 @@ function shade(hex: string, amount: number): string {
 }
 
 export function drawBoardFrame(ctx: CanvasRenderingContext2D, layout: Layout): void {
-  const pad = 10;
+  const pad = 7;
   ctx.fillStyle = FRAME;
   ctx.beginPath();
   roundRect(
@@ -213,16 +213,13 @@ export function drawBoardFrame(ctx: CanvasRenderingContext2D, layout: Layout): v
     layout.boardY - pad,
     layout.boardPx + pad * 2,
     layout.boardPx + pad * 2,
-    12,
+    16,
   );
   ctx.fill();
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur = 18;
-  ctx.shadowOffsetY = 3;
+  ctx.beginPath();
+  roundRect(ctx, layout.boardX, layout.boardY, layout.boardPx, layout.boardPx, 6);
   ctx.fillStyle = WELL;
-  ctx.fillRect(layout.boardX, layout.boardY, layout.boardPx, layout.boardPx);
-  ctx.restore();
+  ctx.fill();
 }
 
 export function drawBoard(
@@ -235,8 +232,10 @@ export function drawBoard(
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const { x, y, s } = cellRect(layout, r, c);
-      ctx.fillStyle = "rgba(255,255,255,0.03)";
-      ctx.fillRect(x, y, s, s);
+      ctx.fillStyle = CELL_WELL;
+      ctx.beginPath();
+      roundRect(ctx, x, y, s, s, Math.max(3, s * 0.18));
+      ctx.fill();
       const v = board[r][c];
       if (!v) continue;
       const key = `${r},${c}`;

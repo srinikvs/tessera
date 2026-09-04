@@ -247,7 +247,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.20 · compact unboxed tray</p>
+      <p className="meta">v1.1.21 · near-black chrome</p>
     </div>
   );
 }
