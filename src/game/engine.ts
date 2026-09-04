@@ -22,7 +22,6 @@ import {
   drawGhost,
   drawLinePreview,
   drawParticles,
-  drawTraySlots,
   hitTrayPiece,
   pointerToCell,
   type Floater,
@@ -146,6 +145,11 @@ export function createEngine(
       canUndo: !!undo && screen === "play" && phase === "idle" && !drag,
       hint: hint && screen === "play",
       endProgress: phase === "ending" ? Math.min(1, endingT / END_HOLD) : 0,
+      tray: tray.map((p) =>
+        pieceOk(p) ? { cells: p.cells.map(([a, b]) => [a, b] as [number, number]), color: p.color } : null,
+      ),
+      trayFits: trayFits.slice(),
+      draggingSlot: drag ? drag.slot : null,
     });
   }
 
@@ -240,8 +244,9 @@ export function createEngine(
     padTray();
     const must =
       fillAfterClear || pendingClear !== null || phase === "clearing" || tray.every((p) => !pieceOk(p));
-    if (must) fillEmptySlots();
-    else refreshFits();
+    if (must) {
+      if (fillEmptySlots()) emitUi();
+    } else refreshFits();
     if (tray.every(pieceOk) && !pendingClear && phase !== "clearing") fillAfterClear = false;
   }
 
@@ -317,7 +322,6 @@ export function createEngine(
     phase = "idle";
     ensurePlayTray(true);
     persist();
-    resize();
     emitUi();
     checkGameOver();
   }
@@ -494,8 +498,19 @@ export function createEngine(
     if (drag) return;
     const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
     const w = canvas.clientWidth;
+    const rawH = canvas.clientHeight;
     const vvH = window.visualViewport?.height;
-    const h = Math.min(canvas.clientHeight, Math.round(vvH ?? canvas.clientHeight));
+    let h = Math.min(rawH, Math.round(vvH ?? rawH));
+    // iOS URL-bar / visualViewport shrink after a line clear must not
+    // push the tray off-screen. Ignore height-only dips while playing.
+    if (
+      (screen === "play" || screen === "ending") &&
+      layout.h > 80 &&
+      Math.abs(w - layout.w) < 2 &&
+      h < layout.h * 0.92
+    ) {
+      h = layout.h;
+    }
     if (w < 2 || h < 2) return;
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(canvas.clientHeight * dpr);
@@ -549,8 +564,36 @@ export function createEngine(
     }
   }
 
+  function beginTrayDrag(slot: number, e: { clientX: number; clientY: number; pointerId: number; pointerType: string }): void {
+    if (screen !== "play" || phase === "ending") return;
+    if (phase === "clearing") applyClear();
+    ensurePlayTray(false);
+    const piece = tray[slot];
+    if (!pieceOk(piece)) return;
+    dragRect = canvas.getBoundingClientRect();
+    const { x, y } = eventPos(e);
+    const [grabR, grabC] = piece.cells[0];
+    setDrag({
+      slot,
+      piece,
+      grabR,
+      grabC,
+      x,
+      y,
+      pointerId: e.pointerId,
+      lift: e.pointerType === "mouse" ? 0 : Math.max(36, layout.cell * 0.9),
+    });
+    try {
+      sfxPickup();
+    } catch {
+      /* ignore */
+    }
+    emitUi();
+  }
+
   function onPointerDown(e: PointerEvent): void {
-    if (screen !== "play" || phase !== "idle") return;
+    if (screen !== "play" || phase === "ending") return;
+    if (phase === "clearing") applyClear();
     dragRect = canvas.getBoundingClientRect();
     const { x, y } = eventPos(e);
     const hit = hitTrayPiece(layout, tray, x, y);
@@ -558,30 +601,8 @@ export function createEngine(
       dragRect = null;
       return;
     }
-    const piece = tray[hit.slot];
-    if (!piece) {
-      dragRect = null;
-      return;
-    }
     e.preventDefault();
-    setDrag({
-      slot: hit.slot,
-      piece,
-      grabR: hit.grabR,
-      grabC: hit.grabC,
-      x,
-      y,
-      pointerId: e.pointerId,
-      lift: e.pointerType === "mouse" ? 0 : layout.cell * 0.9,
-    });
-    if (e.pointerType === "mouse") {
-      try {
-        canvas.setPointerCapture(e.pointerId);
-      } catch {
-        /* capture is best-effort */
-      }
-    }
-    sfxPickup();
+    beginTrayDrag(hit.slot, e);
   }
 
   function onPointerMove(e: PointerEvent): void {
@@ -727,7 +748,6 @@ export function createEngine(
       }
 
       if (screen === "play" && !drag) ensurePlayTray(false);
-      drawTraySlots(ctx, layout, tray, drag ? drag.slot : null, trayFits);
 
       if (drag) {
         drawDragPiece(
@@ -861,6 +881,7 @@ export function createEngine(
       unlockAudio();
       emitUi();
     },
+    beginTrayDrag,
     destroy: () => {
       running = false;
       cancelAnimationFrame(raf);
