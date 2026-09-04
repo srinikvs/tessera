@@ -585,7 +585,7 @@ export function createEngine(
     const wide = window.matchMedia("(min-width: 640px)").matches;
     layout = computeLayout(w, h, {
       top: sat + 58 + (hint && screen === "play" && !wide ? 36 : 0),
-      bottom: sab + (wide ? 12 : 36),
+      bottom: sab + 112,
     });
   }
 

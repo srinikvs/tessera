@@ -247,7 +247,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.19 · grok.me layout</p>
+      <p className="meta">v1.1.20 · compact unboxed tray</p>
     </div>
   );
 }
@@ -353,9 +353,12 @@ function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
       }
       const rows = Math.max(1, maxR - minR + 1);
       const cols = Math.max(1, maxC - minC + 1);
-      const pad = 6;
-      const cell = Math.max(8, Math.min((w - pad * 2) / cols, (h - pad * 2) / rows));
-      const gap = cell >= 22 ? 3 : cell >= 16 ? 2 : 1.5;
+      const pad = 4;
+      const cell = Math.max(
+        8,
+        Math.min(22, (w - pad * 2) / cols, (h - pad * 2) / rows),
+      );
+      const gap = cell >= 20 ? 2.5 : 1.5;
       const ox = (w - cols * cell) / 2;
       const oy = (h - rows * cell) / 2;
       drawPiece(

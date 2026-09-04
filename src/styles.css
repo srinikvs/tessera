@@ -211,25 +211,38 @@ html.tessera-drag footer {
   z-index: 25;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.5rem;
-  padding: 0.4rem 0.65rem max(0.65rem, var(--sab));
+  gap: 0.75rem;
+  padding: 0.15rem 1.1rem max(0.45rem, var(--sab));
   pointer-events: auto;
+  align-items: center;
 }
 
 .tray-well {
   pointer-events: auto;
   position: relative;
-  min-height: 5.75rem;
-  height: 22vw;
-  max-height: 7.5rem;
-  border-radius: 14px;
+  height: 6.75rem;
+  min-height: 6.75rem;
+  max-height: 6.75rem;
   border: none;
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.4rem;
+  padding: 0;
   touch-action: none;
+}
+
+@media (min-width: 640px) {
+  .hint {
+    display: none;
+  }
+  .foot {
+    display: none;
+  }
+  .tray-dock {
+    padding-inline: max(12vw, 2rem);
+    gap: 1.25rem;
+  }
 }
 
 .tray-well:disabled {
@@ -250,15 +263,6 @@ html.tessera-drag footer {
   height: 78%;
   display: grid;
   gap: 2px;
-}
-
-@media (min-width: 640px) {
-  .hint {
-    display: none;
-  }
-  .foot {
-    display: none;
-  }
 }
 
 .overlay {

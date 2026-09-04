@@ -30,7 +30,7 @@ export interface Floater {
   color: string;
 }
 
-const TRAY_UNITS = 4;
+const TRAY_BAND = 112;
 const WELL_INSET_X = 8;
 const WELL_INSET_Y = 4;
 const TRAY_PIECE_PAD = 6;
@@ -61,18 +61,17 @@ export function computeLayout(
   const gutter = 8;
 
   const maxCellW = Math.floor((w - padX * 2) / BOARD_SIZE);
-  const maxCellH = Math.floor((innerH - gutter) / (BOARD_SIZE + TRAY_UNITS));
+  const maxCellH = Math.floor((innerH - gutter - TRAY_BAND) / BOARD_SIZE);
   const cell = Math.max(11, Math.min(56, maxCellW, maxCellH));
   const gap = cell >= 36 ? 3 : cell >= 28 ? 2 : 1.5;
   const boardPx = cell * BOARD_SIZE;
-  const trayH = cell * TRAY_UNITS;
-  const used = boardPx + gutter + trayH;
+  const used = boardPx + gutter + TRAY_BAND;
   const slack = Math.max(0, innerH - used);
   const boardY = top + Math.floor(slack * 0.35);
   const boardX = Math.round((w - boardPx) / 2);
   const slotY = boardY + boardPx + gutter;
   const maxSlotH = Math.max(8, h - bottom - slotY);
-  const slotH = Math.max(8, Math.min(trayH, maxSlotH));
+  const slotH = Math.max(8, Math.min(TRAY_BAND, maxSlotH));
   const slotW = w / 3;
   const slots = [0, 1, 2].map((i) => ({
     x: i * slotW,
@@ -128,7 +127,7 @@ export function trayPieceRect(
   // so the tray is a scaled-down preview; drag/ghost keep layout.cell.
   const cell = Math.max(
     4,
-    Math.min(availW / Math.max(cols, 1), availH / Math.max(rows, 1), layout.cell),
+    Math.min(availW / Math.max(cols, 1), availH / Math.max(rows, 1), 22, layout.cell),
   );
   const pw = cols * cell;
   const ph = rows * cell;
