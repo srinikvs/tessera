@@ -30,7 +30,6 @@ export interface Floater {
   color: string;
 }
 
-const TRAY_BAND = 112;
 const WELL_INSET_X = 8;
 const WELL_INSET_Y = 4;
 const TRAY_PIECE_PAD = 6;
@@ -59,20 +58,18 @@ export function computeLayout(
   const innerH = Math.max(1, h - top - bottom);
   const padX = Math.max(10, Math.round(w * 0.04));
   const wide = w >= 640;
-  const gutter = wide ? 12 : 22;
+  const gutter = wide ? 8 : 8;
 
   const maxCellW = Math.floor((w - padX * 2) / BOARD_SIZE);
-  const maxCellH = Math.floor((innerH - gutter - TRAY_BAND) / BOARD_SIZE);
+  const maxCellH = Math.floor((innerH - gutter) / BOARD_SIZE);
   const cell = Math.max(11, Math.min(56, maxCellW, maxCellH));
   const gap = cell >= 36 ? 3 : cell >= 28 ? 2 : 1.5;
   const boardPx = cell * BOARD_SIZE;
-  const used = boardPx + gutter + TRAY_BAND;
-  const slack = Math.max(0, innerH - used);
-  const boardY = top + Math.floor(slack * (wide ? 0.28 : 0.5));
   const boardX = Math.round((w - boardPx) / 2);
+  const boardY = Math.max(top, h - bottom - gutter - boardPx);
   const slotY = boardY + boardPx + gutter;
-  const maxSlotH = Math.max(8, h - bottom - slotY);
-  const slotH = Math.max(8, Math.min(TRAY_BAND, maxSlotH));
+  const maxSlotH = Math.max(8, h - slotY);
+  const slotH = maxSlotH;
   const slotW = w / 3;
   const slots = [0, 1, 2].map((i) => ({
     x: i * slotW,

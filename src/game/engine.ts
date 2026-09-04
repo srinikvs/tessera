@@ -151,6 +151,7 @@ export function createEngine(
       trayFits: trayFits.slice(),
       draggingSlot: drag ? drag.slot : null,
       trayCell: Math.max(20, Math.min(24, Math.round(layout.cell) || 22)),
+      trayTop: Math.round(layout.boardY + layout.boardPx + 8),
     });
   }
 
@@ -586,7 +587,7 @@ export function createEngine(
     const wide = window.matchMedia("(min-width: 640px)").matches;
     layout = computeLayout(w, h, {
       top: sat + (wide ? 56 : 70) + (hint && screen === "play" && !wide ? 28 : 0),
-      bottom: sab + (wide ? 140 : 180),
+      bottom: sab + (wide ? 148 : 176),
     });
   }
 

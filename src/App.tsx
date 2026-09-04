@@ -22,6 +22,7 @@ const initialUi = (): UiState => {
     trayFits: [true, true, true],
     draggingSlot: null,
     trayCell: 22,
+    trayTop: 0,
   };
 };
 
@@ -74,14 +75,17 @@ export function App() {
             Tessera
           </button>
           <div className="hud-stats">
-            <div className="score-wrap">
-              <span className="label">Best</span>
-              <span className="score">{formatScore(ui.best)}</span>
+            <div className="hud-stats-row">
+              <div className="score-wrap">
+                <span className="label">Best</span>
+                <span className="score">{formatScore(ui.best)}</span>
+              </div>
+              <div className="score-wrap">
+                <span className="label">Score</span>
+                <span className="score">{formatScore(ui.score)}</span>
+              </div>
             </div>
-            <div className="score-wrap">
-              <span className="label">Score</span>
-              <span className="score">{formatScore(ui.score)}</span>
-            </div>
+            <span className="hud-cap">{ui.combo > 1 ? `Combo ×${ui.combo}` : "No time limit"}</span>
           </div>
           <div className="actions">
             <button
@@ -119,14 +123,12 @@ export function App() {
         <p className="hint">Drag a block onto the board. A full row or column clears.</p>
       )}
 
-      {ui.screen === "play" && (
-        <footer className="foot">
-          {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
-        </footer>
-      )}
-
       {boardLive && (
-        <div className="tray-dock" aria-label="Block tray">
+        <div
+          className="tray-dock"
+          aria-label="Block tray"
+          style={ui.trayTop > 0 ? { top: ui.trayTop, bottom: "auto" } : undefined}
+        >
           {[0, 1, 2].map((i) => (
             <button
               key={i}
@@ -248,7 +250,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.21</p>
+      <p className="meta">v1.1.22</p>
     </div>
   );
 }

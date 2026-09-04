@@ -31,6 +31,7 @@ export interface UiState {
   trayFits: boolean[];
   draggingSlot: number | null;
   trayCell: number;
+  trayTop: number;
 }
 
 export interface PublicEngine {
