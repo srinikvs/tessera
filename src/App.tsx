@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createEngine } from "./game/engine";
 import { loadBest, loadSave } from "./game/save";
-import type { PublicEngine, UiState } from "./game/types";
+import { COLORS } from "./game/theme";
+import type { PublicEngine, TrayView, UiState } from "./game/types";
 
 const initialUi = (): UiState => {
   const save = loadSave();
@@ -17,6 +18,9 @@ const initialUi = (): UiState => {
     canUndo: false,
     hint: false,
     endProgress: 0,
+    tray: [null, null, null],
+    trayFits: [true, true, true],
+    draggingSlot: null,
   };
 };
 
@@ -113,6 +117,29 @@ export function App() {
           <span>Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
         </footer>
+      )}
+
+      {boardLive && (
+        <div className="tray-dock" aria-label="Block tray">
+          {[0, 1, 2].map((i) => (
+            <button
+              key={i}
+              type="button"
+              className="tray-well"
+              aria-label={`Tray slot ${i + 1}`}
+              disabled={ui.screen === "ending"}
+              onPointerDown={(e) => {
+                if (ui.screen !== "play") return;
+                e.preventDefault();
+                engineRef.current?.beginTrayDrag(i, e);
+              }}
+            >
+              {ui.tray[i] && ui.draggingSlot !== i ? (
+                <MiniPiece piece={ui.tray[i]!} gray={ui.trayFits[i] === false} />
+              ) : null}
+            </button>
+          ))}
+        </div>
       )}
 
       {ui.screen === "ending" && (
@@ -215,7 +242,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.10 · recessed board</p>
+      <p className="meta">v1.1.16 · remount tray after clear</p>
     </div>
   );
 }
@@ -287,6 +314,39 @@ function OverPanel({
           Play again
         </button>
       </div>
+    </div>
+  );
+}
+
+function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
+  let minR = 0;
+  let minC = 0;
+  let maxR = 0;
+  let maxC = 0;
+  for (const [r, c] of piece.cells) {
+    if (r < minR) minR = r;
+    if (c < minC) minC = c;
+    if (r > maxR) maxR = r;
+    if (c > maxC) maxC = c;
+  }
+  const rows = maxR - minR + 1;
+  const cols = maxC - minC + 1;
+  const fill = COLORS[(piece.color - 1 + COLORS.length) % COLORS.length];
+  return (
+    <div
+      className={`mini-piece${gray ? " is-gray" : ""}`}
+      style={{
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        gridTemplateRows: `repeat(${rows}, 1fr)`,
+        aspectRatio: `${cols} / ${rows}`,
+      }}
+    >
+      {Array.from({ length: rows * cols }, (_, i) => {
+        const r = Math.floor(i / cols) + minR;
+        const c = (i % cols) + minC;
+        const on = piece.cells.some(([rr, cc]) => rr === r && cc === c);
+        return <span key={i} style={on ? { background: fill } : undefined} />;
+      })}
     </div>
   );
 }
