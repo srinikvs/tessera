@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createEngine } from "./game/engine";
+import { drawPiece } from "./game/render";
 import { loadBest, loadSave } from "./game/save";
-import { COLORS } from "./game/theme";
 import type { PublicEngine, TrayView, UiState } from "./game/types";
 
 const initialUi = (): UiState => {
@@ -242,7 +242,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.17 · persist then remount</p>
+      <p className="meta">v1.1.18 · tray tiles match the board</p>
     </div>
   );
 }
@@ -319,36 +319,60 @@ function OverPanel({
 }
 
 function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
-  let minR = 0;
-  let minC = 0;
-  let maxR = 0;
-  let maxC = 0;
-  for (const [r, c] of piece.cells) {
-    if (r < minR) minR = r;
-    if (c < minC) minC = c;
-    if (r > maxR) maxR = r;
-    if (c > maxC) maxC = c;
-  }
-  const rows = maxR - minR + 1;
-  const cols = maxC - minC + 1;
-  const fill = COLORS[(piece.color - 1 + COLORS.length) % COLORS.length];
-  return (
-    <div
-      className={`mini-piece${gray ? " is-gray" : ""}`}
-      style={{
-        gridTemplateColumns: `repeat(${cols}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, 1fr)`,
-        aspectRatio: `${cols} / ${rows}`,
-      }}
-    >
-      {Array.from({ length: rows * cols }, (_, i) => {
-        const r = Math.floor(i / cols) + minR;
-        const c = (i % cols) + minC;
-        const on = piece.cells.some(([rr, cc]) => rr === r && cc === c);
-        return <span key={i} style={on ? { background: fill } : undefined} />;
-      })}
-    </div>
-  );
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const paint = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const box = (canvas.parentElement ?? canvas).getBoundingClientRect();
+      const w = Math.max(1, box.width - 8);
+      const h = Math.max(1, box.height - 8);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      let minR = Infinity;
+      let minC = Infinity;
+      let maxR = -Infinity;
+      let maxC = -Infinity;
+      for (const [r, c] of piece.cells) {
+        if (r < minR) minR = r;
+        if (c < minC) minC = c;
+        if (r > maxR) maxR = r;
+        if (c > maxC) maxC = c;
+      }
+      const rows = Math.max(1, maxR - minR + 1);
+      const cols = Math.max(1, maxC - minC + 1);
+      const pad = 6;
+      const cell = Math.max(8, Math.min((w - pad * 2) / cols, (h - pad * 2) / rows));
+      const gap = cell >= 22 ? 3 : cell >= 16 ? 2 : 1.5;
+      const ox = (w - cols * cell) / 2;
+      const oy = (h - rows * cell) / 2;
+      drawPiece(
+        ctx,
+        {
+          id: 0,
+          color: piece.color,
+          cells: piece.cells.map(([r, c]) => [r - minR, c - minC] as [number, number]),
+        },
+        ox,
+        oy,
+        cell,
+        gap,
+        { gray },
+      );
+    };
+    paint();
+    const ro = new ResizeObserver(paint);
+    ro.observe(canvas.parentElement ?? canvas);
+    return () => ro.disconnect();
+  }, [piece, gray]);
+  return <canvas ref={ref} className="tray-tiles" aria-hidden />;
 }
 
 function HowTo() {

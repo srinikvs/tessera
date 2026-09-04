@@ -1,5 +1,5 @@
 import { BOARD_SIZE, type Board, type Piece, type Shape } from "./types";
-import { COLORS, DEAD, DEAD_HI, FRAME, GHOST_BAD, GHOST_OK, MUTED, WELL } from "./theme";
+import { COLORS, DEAD, DEAD_HI, FRAME, MUTED, WELL } from "./theme";
 
 export interface Layout {
   w: number;
@@ -323,16 +323,16 @@ export function drawGhost(
   col: number,
   ok: boolean,
 ): void {
+  ctx.save();
+  ctx.globalAlpha = ok ? 0.5 : 0.38;
   for (const [dr, dc] of piece.cells) {
     const r = row + dr;
     const c = col + dc;
     if (r < 0 || c < 0 || r >= BOARD_SIZE || c >= BOARD_SIZE) continue;
     const { x, y, s } = cellRect(layout, r, c);
-    ctx.fillStyle = ok ? GHOST_OK : GHOST_BAD;
-    ctx.beginPath();
-    roundRect(ctx, x, y, s, s, Math.max(3, s * 0.18));
-    ctx.fill();
+    drawTile(ctx, x, y, s, COLORS[(piece.color - 1) % COLORS.length], !ok);
   }
+  ctx.restore();
 }
 
 export function drawLinePreview(
