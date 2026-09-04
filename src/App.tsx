@@ -242,7 +242,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.17 · persist then remount</p>
+      <p className="meta">v1.1.18 · remount keeps tray</p>
     </div>
   );
 }

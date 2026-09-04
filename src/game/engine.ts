@@ -493,9 +493,9 @@ export function createEngine(
     const id = { n: Math.max(nextPieceId, s.nextPieceId || 1) };
     const loaded = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
     padTray();
-    const loadedN = loaded.filter(pieceOk).length;
-    const keptN = keptTray.filter(pieceOk).length;
-    tray = loadedN >= keptN ? loaded : keptTray;
+    tray = [0, 1, 2].map((i) =>
+      pieceOk(keptTray[i]) ? keptTray[i] : pieceOk(loaded[i]) ? loaded[i] : null,
+    );
     nextPieceId = id.n;
     score = keptScore;
     combo = keptCombo;
