@@ -181,7 +181,17 @@ export function createEngine(
 
   function refreshFits(): void {
     const fitBoard = logicalBoard();
-    trayFits = tray.map((p) => (p ? anyFit(fitBoard, p) : true));
+    try {
+      trayFits = tray.map((p) => (pieceOk(p) ? anyFit(fitBoard, p) : true));
+    } catch {
+      trayFits = [true, true, true];
+    }
+  }
+
+  let fillAfterClear = false;
+
+  function pieceOk(p: Piece | null): p is Piece {
+    return !!p && Array.isArray(p.cells) && p.cells.length > 0;
   }
 
   function padTray(): void {
@@ -194,7 +204,10 @@ export function createEngine(
     padTray();
     const emptyIdx: number[] = [];
     for (let i = 0; i < 3; i++) {
-      if (!tray[i]) emptyIdx.push(i);
+      if (!pieceOk(tray[i])) {
+        tray[i] = null;
+        emptyIdx.push(i);
+      }
     }
     if (emptyIdx.length === 0) {
       refreshFits();
@@ -204,8 +217,12 @@ export function createEngine(
     for (const i of emptyIdx) tray[i] = deal();
     const fitBoard = logicalBoard();
     for (let attempt = 0; attempt < 12; attempt++) {
-      trayFits = tray.map((p) => (p ? anyFit(fitBoard, p) : true));
-      if (trayFits.some((f, i) => tray[i] && f)) break;
+      try {
+        trayFits = tray.map((p) => (pieceOk(p) ? anyFit(fitBoard, p) : true));
+      } catch {
+        trayFits = [true, true, true];
+      }
+      if (trayFits.some((f, i) => pieceOk(tray[i]) && f)) break;
       for (const i of emptyIdx) tray[i] = deal();
     }
     refreshFits();
@@ -218,19 +235,20 @@ export function createEngine(
   }
 
   function ensurePlayTray(fromClear: boolean): void {
+    if (fromClear) fillAfterClear = true;
     if (screen !== "play" && screen !== "ending" && screen !== "paused") return;
     padTray();
-    if (fromClear || pendingClear !== null || phase === "clearing") {
-      fillEmptySlots();
-      return;
-    }
-    if (tray.every((p) => !p)) fillEmptySlots();
+    const must =
+      fillAfterClear || pendingClear !== null || phase === "clearing" || tray.every((p) => !pieceOk(p));
+    if (must) fillEmptySlots();
     else refreshFits();
+    if (tray.every(pieceOk) && !pendingClear && phase !== "clearing") fillAfterClear = false;
   }
 
   function refillTray(): void {
     padTray();
     for (let i = 0; i < 3; i++) tray[i] = null;
+    fillAfterClear = false;
     fillEmptySlots();
   }
 
@@ -298,40 +316,6 @@ export function createEngine(
     pendingClear = null;
     phase = "idle";
     ensurePlayTray(true);
-    persist();
-    remountAfterClear();
-  }
-
-  function applySnapshot(
-    s: NonNullable<ReturnType<typeof loadSave>>,
-    keep?: { score: number; combo: number; best: number },
-  ): void {
-    board = s.board.map((row) => row.slice());
-    const id = { n: s.nextPieceId || 1 };
-    tray = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
-    padTray();
-    nextPieceId = id.n;
-    score = Math.max(s.score || 0, keep?.score ?? 0);
-    combo = Math.max(s.combo || 0, keep?.combo ?? 0);
-    best = Math.max(best, s.best || 0, keep?.best ?? 0);
-    resetSession();
-    screen = "play";
-    ensurePlayTray(true);
-  }
-
-  function remountAfterClear(): void {
-    const kept = { score, combo, best };
-    const s = loadSave();
-    if (s && (s.screen === "play" || s.screen === "paused" || s.screen === "over")) {
-      applySnapshot(s, kept);
-    } else {
-      resetSession();
-      screen = "play";
-      score = kept.score;
-      combo = kept.combo;
-      best = kept.best;
-      ensurePlayTray(true);
-    }
     persist();
     resize();
     emitUi();
@@ -440,7 +424,17 @@ export function createEngine(
   }
 
   function restoreSave(s: NonNullable<ReturnType<typeof loadSave>>): boolean {
-    applySnapshot(s);
+    board = s.board.map((row) => row.slice());
+    const id = { n: s.nextPieceId || 1 };
+    tray = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
+    padTray();
+    nextPieceId = id.n;
+    score = s.score || 0;
+    combo = s.combo || 0;
+    best = Math.max(best, s.best || 0);
+    resetSession();
+    screen = "play";
+    ensurePlayTray(true);
     persist();
     resize();
     emitUi();
@@ -778,17 +772,26 @@ export function createEngine(
     if (!running) return;
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    if (screen === "play" || screen === "ending") update(dt);
-    else {
-      trauma = Math.max(0, trauma - dt * 2);
-      for (const p of particles) {
-        p.life -= dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
+    try {
+      if (screen === "play" || screen === "ending") update(dt);
+      else {
+        trauma = Math.max(0, trauma - dt * 2);
+        for (const p of particles) {
+          p.life -= dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+        }
+        particles = particles.filter((p) => p.life > 0);
       }
-      particles = particles.filter((p) => p.life > 0);
+      if (screen === "play" && !drag) ensurePlayTray(false);
+      draw();
+    } catch {
+      try {
+        ensurePlayTray(true);
+      } catch {
+        /* keep the loop alive */
+      }
     }
-    draw();
     raf = requestAnimationFrame(loop);
   }
 
