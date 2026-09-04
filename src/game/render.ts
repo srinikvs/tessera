@@ -415,7 +415,7 @@ export function drawFloaters(ctx: CanvasRenderingContext2D, floaters: Floater[])
     const a = 1 - f.t / 0.9;
     ctx.globalAlpha = Math.max(0, a);
     ctx.fillStyle = f.color;
-    ctx.font = "600 16px system-ui, sans-serif";
+    ctx.font = "600 16px Outfit, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(f.text, f.x, f.y - f.t * 40);
   }
@@ -431,7 +431,7 @@ export function drawCombo(
   const a = t < 0.2 ? t / 0.2 : Math.max(0, 1 - (t - 0.6) / 0.55);
   ctx.globalAlpha = a;
   ctx.fillStyle = MUTED;
-  ctx.font = "600 22px system-ui, sans-serif";
+  ctx.font = "600 22px Fraunces, Georgia, serif";
   ctx.textAlign = "center";
   ctx.fillText(text, layout.boardX + layout.boardPx / 2, layout.boardY - 18);
   ctx.globalAlpha = 1;

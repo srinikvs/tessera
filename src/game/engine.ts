@@ -844,7 +844,7 @@ export function createEngine(
       if (textA > 0) {
         ctx.globalAlpha = textA;
         ctx.fillStyle = "#f2f1ee";
-        ctx.font = "500 18px system-ui, sans-serif";
+        ctx.font = "500 18px Fraunces, Georgia, serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("No more moves", w / 2, h / 2);
