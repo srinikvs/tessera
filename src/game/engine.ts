@@ -157,6 +157,9 @@ export function createEngine(
 
   function persist(): void {
     if (screen === "start") return;
+    if ((screen === "play" || screen === "ending" || screen === "paused") && !drag) {
+      ensurePlayTray(false);
+    }
     writeSave(
       snapshotSave({
         board: logicalBoard(),
@@ -181,45 +184,83 @@ export function createEngine(
     trayFits = tray.map((p) => (p ? anyFit(fitBoard, p) : true));
   }
 
-  function refillTray(): void {
-    const hadEmpty = tray.some((p) => p === null);
+  function padTray(): void {
+    if (!Array.isArray(tray)) tray = [null, null, null];
+    while (tray.length < 3) tray.push(null);
+    if (tray.length > 3) tray = tray.slice(0, 3);
+  }
+
+  function fillEmptySlots(): boolean {
+    padTray();
+    const emptyIdx: number[] = [];
     for (let i = 0; i < 3; i++) {
-      if (!tray[i]) tray[i] = pickShape({ n: nextPieceId++ });
+      if (!tray[i]) emptyIdx.push(i);
     }
+    if (emptyIdx.length === 0) {
+      refreshFits();
+      return false;
+    }
+    const deal = (): Piece => pickShape({ n: nextPieceId++ });
+    for (const i of emptyIdx) tray[i] = deal();
     const fitBoard = logicalBoard();
-    for (let attempt = 0; attempt < 10; attempt++) {
+    for (let attempt = 0; attempt < 12; attempt++) {
       trayFits = tray.map((p) => (p ? anyFit(fitBoard, p) : true));
       if (trayFits.some((f, i) => tray[i] && f)) break;
-      tray = [pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ }), pickShape({ n: nextPieceId++ })];
+      for (const i of emptyIdx) tray[i] = deal();
     }
     refreshFits();
-    if (hadEmpty) sfxDeal();
+    try {
+      sfxDeal();
+    } catch {
+      /* audio must not block a deal */
+    }
+    return true;
+  }
+
+  function ensurePlayTray(fromClear: boolean): void {
+    if (screen !== "play" && screen !== "ending" && screen !== "paused") return;
+    padTray();
+    if (fromClear || pendingClear !== null || phase === "clearing") {
+      fillEmptySlots();
+      return;
+    }
+    if (tray.every((p) => !p)) fillEmptySlots();
+    else refreshFits();
+  }
+
+  function refillTray(): void {
+    padTray();
+    for (let i = 0; i < 3; i++) tray[i] = null;
+    fillEmptySlots();
   }
 
   function beginEnding(): void {
+    ensurePlayTray(true);
     setDrag(null);
     phase = "ending";
     endingT = 0;
     screen = "ending";
-    sfxOver();
+    try {
+      sfxOver();
+    } catch {
+      /* ignore */
+    }
     persist();
     emitUi();
   }
 
   function checkGameOver(): boolean {
+    if (phase === "clearing" || pendingClear) return false;
     if (anyRemainingFits(logicalBoard(), tray)) return false;
     beginEnding();
     return true;
   }
 
   function afterPlaceResolved(fromClear = false): void {
-    // Empty tray → new trio. A line clear also fills leftover empty slots
-    // so a round does not stall with missing blocks after a clear.
-    if (tray.every((p) => p === null) || fromClear) refillTray();
-    else refreshFits();
+    ensurePlayTray(fromClear);
     persist();
     emitUi();
-    if (phase === "clearing") return;
+    if (phase === "clearing" || pendingClear) return;
     checkGameOver();
   }
 
@@ -256,7 +297,45 @@ export function createEngine(
     board = applyLineClear(board, pendingClear.rows, pendingClear.cols);
     pendingClear = null;
     phase = "idle";
-    afterPlaceResolved(true);
+    ensurePlayTray(true);
+    persist();
+    remountAfterClear();
+  }
+
+  function applySnapshot(
+    s: NonNullable<ReturnType<typeof loadSave>>,
+    keep?: { score: number; combo: number; best: number },
+  ): void {
+    board = s.board.map((row) => row.slice());
+    const id = { n: s.nextPieceId || 1 };
+    tray = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
+    padTray();
+    nextPieceId = id.n;
+    score = Math.max(s.score || 0, keep?.score ?? 0);
+    combo = Math.max(s.combo || 0, keep?.combo ?? 0);
+    best = Math.max(best, s.best || 0, keep?.best ?? 0);
+    resetSession();
+    screen = "play";
+    ensurePlayTray(true);
+  }
+
+  function remountAfterClear(): void {
+    const kept = { score, combo, best };
+    const s = loadSave();
+    if (s && (s.screen === "play" || s.screen === "paused" || s.screen === "over")) {
+      applySnapshot(s, kept);
+    } else {
+      resetSession();
+      screen = "play";
+      score = kept.score;
+      combo = kept.combo;
+      best = kept.best;
+      ensurePlayTray(true);
+    }
+    persist();
+    resize();
+    emitUi();
+    checkGameOver();
   }
 
   function commitPlace(slot: number, piece: Piece, row: number, col: number): void {
@@ -302,19 +381,29 @@ export function createEngine(
       pendingClear = { rows, cols };
       phase = "clearing";
       clearT = 0;
-      spawnParticles(rows, cols);
-      sfxClear(lines);
-      const label = comboLabel(lines, combo);
-      if (label) {
-        comboFx = { text: label, t: 0 };
-        sfxCombo();
+      ensurePlayTray(true);
+      persist();
+      try {
+        spawnParticles(rows, cols);
+        sfxClear(lines);
+        const label = comboLabel(lines, combo);
+        if (label) {
+          comboFx = { text: label, t: 0 };
+          sfxCombo();
+        }
+      } catch {
+        /* juice must not block refill */
       }
       trauma = Math.min(1, trauma + 0.15 + lines * 0.08);
       if (lines >= 3 && !reduced) freeze = 0.05;
-      afterPlaceResolved(true);
+      emitUi();
       if (reduced) applyClear();
     } else {
-      sfxPlace();
+      try {
+        sfxPlace();
+      } catch {
+        /* ignore */
+      }
       afterPlaceResolved();
     }
   }
@@ -351,19 +440,7 @@ export function createEngine(
   }
 
   function restoreSave(s: NonNullable<ReturnType<typeof loadSave>>): boolean {
-    board = s.board.map((row) => row.slice());
-    const id = { n: s.nextPieceId || 1 };
-    tray = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
-    while (tray.length < 3) tray.push(null);
-    tray = tray.slice(0, 3);
-    nextPieceId = id.n;
-    score = s.score || 0;
-    combo = s.combo || 0;
-    best = Math.max(best, s.best || 0);
-    resetSession();
-    if (tray.every((p) => p === null)) refillTray();
-    else refreshFits();
-    screen = "play";
+    applySnapshot(s);
     persist();
     resize();
     emitUi();
@@ -559,17 +636,8 @@ export function createEngine(
     if (phase === "clearing") {
       clearT += dt;
       if (clearT >= CLEAR_FLASH + CLEAR_SHRINK) applyClear();
-    } else if (
-      screen === "play" &&
-      phase === "idle" &&
-      !drag &&
-      tray.every((p) => p === null)
-    ) {
-      // Never leave a playable round with an empty tray (heal stale saves / missed refill).
-      refillTray();
-      persist();
-      emitUi();
     }
+    if (screen === "play" && !drag) ensurePlayTray(false);
 
     if (phase === "ending") {
       endingT += dt;
@@ -664,6 +732,7 @@ export function createEngine(
         }
       }
 
+      if (screen === "play" && !drag) ensurePlayTray(false);
       drawTraySlots(ctx, layout, tray, drag ? drag.slot : null, trayFits);
 
       if (drag) {
