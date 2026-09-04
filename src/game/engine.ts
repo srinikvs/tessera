@@ -150,6 +150,7 @@ export function createEngine(
       ),
       trayFits: trayFits.slice(),
       draggingSlot: drag ? drag.slot : null,
+      trayCell: Math.max(20, Math.min(24, Math.round(layout.cell) || 22)),
     });
   }
 

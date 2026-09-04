@@ -21,6 +21,7 @@ const initialUi = (): UiState => {
     tray: [null, null, null],
     trayFits: [true, true, true],
     draggingSlot: null,
+    trayCell: 22,
   };
 };
 
@@ -140,7 +141,7 @@ export function App() {
               }}
             >
               {ui.tray[i] && ui.draggingSlot !== i ? (
-                <MiniPiece piece={ui.tray[i]!} gray={ui.trayFits[i] === false} />
+                <MiniPiece piece={ui.tray[i]!} gray={ui.trayFits[i] === false} cell={ui.trayCell} />
               ) : null}
             </button>
           ))}
@@ -247,7 +248,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.21 · near-black chrome</p>
+      <p className="meta">v1.1.22 · compact matching tiles</p>
     </div>
   );
 }
@@ -323,7 +324,7 @@ function OverPanel({
   );
 }
 
-function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
+function MiniPiece({ piece, gray, cell: tile }: { piece: TrayView; gray: boolean; cell: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -331,16 +332,6 @@ function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
     const paint = () => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      const box = (canvas.parentElement ?? canvas).getBoundingClientRect();
-      const w = Math.max(1, box.width - 8);
-      const h = Math.max(1, box.height - 8);
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, w, h);
       let minR = Infinity;
       let minC = Infinity;
       let maxR = -Infinity;
@@ -353,14 +344,17 @@ function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
       }
       const rows = Math.max(1, maxR - minR + 1);
       const cols = Math.max(1, maxC - minC + 1);
-      const pad = 4;
-      const cell = Math.max(
-        8,
-        Math.min(22, (w - pad * 2) / cols, (h - pad * 2) / rows),
-      );
-      const gap = cell >= 20 ? 2.5 : 1.5;
-      const ox = (w - cols * cell) / 2;
-      const oy = (h - rows * cell) / 2;
+      const cell = Math.max(20, Math.min(24, tile || 22));
+      const gap = cell >= 22 ? 2.5 : 2;
+      const w = cols * cell;
+      const h = rows * cell;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
       drawPiece(
         ctx,
         {
@@ -368,18 +362,15 @@ function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
           color: piece.color,
           cells: piece.cells.map(([r, c]) => [r - minR, c - minC] as [number, number]),
         },
-        ox,
-        oy,
+        0,
+        0,
         cell,
         gap,
         { gray },
       );
     };
     paint();
-    const ro = new ResizeObserver(paint);
-    ro.observe(canvas.parentElement ?? canvas);
-    return () => ro.disconnect();
-  }, [piece, gray]);
+  }, [piece, gray, tile]);
   return <canvas ref={ref} className="tray-tiles" aria-hidden />;
 }
 

@@ -30,6 +30,7 @@ export interface UiState {
   tray: Array<TrayView | null>;
   trayFits: boolean[];
   draggingSlot: number | null;
+  trayCell: number;
 }
 
 export interface PublicEngine {

@@ -220,16 +220,21 @@ html.tessera-drag footer {
 .tray-well {
   pointer-events: auto;
   position: relative;
-  height: 6.75rem;
-  min-height: 6.75rem;
-  max-height: 6.75rem;
+  height: auto;
+  min-height: 0;
+  max-height: none;
   border: none;
   background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 0.35rem 0;
   touch-action: none;
+}
+
+.tray-tiles {
+  display: block;
+  pointer-events: none;
 }
 
 @media (min-width: 640px) {
@@ -250,10 +255,6 @@ html.tessera-drag footer {
 }
 
 .tray-tiles {
-  position: absolute;
-  inset: 0.35rem;
-  width: auto;
-  height: auto;
   display: block;
   pointer-events: none;
 }
