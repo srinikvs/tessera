@@ -141,7 +141,7 @@ html.tessera-drag footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--fg);
+  color: #f2f1ee;
 }
 
 .icon-btn:hover {

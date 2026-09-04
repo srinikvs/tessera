@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createEngine } from "./game/engine";
 import { drawPiece } from "./game/render";
 import { loadBest, loadSave } from "./game/save";
@@ -91,7 +91,7 @@ export function App() {
               onClick={() => engineRef.current?.toggleMute()}
               disabled={ui.screen === "ending"}
             >
-              {ui.muted ? "🔇" : "🔊"}
+              {ui.muted ? <IconVolumeOff /> : <IconVolume />}
             </button>
             <button
               type="button"
@@ -100,7 +100,7 @@ export function App() {
               disabled={!ui.canUndo || ui.screen === "ending"}
               onClick={() => engineRef.current?.undo()}
             >
-              ↩
+              <IconUndo />
             </button>
             <button
               type="button"
@@ -109,7 +109,7 @@ export function App() {
               disabled={ui.screen === "ending"}
               onClick={() => engineRef.current?.pause()}
             >
-              ❚❚
+              <IconPause />
             </button>
           </div>
         </header>
@@ -248,7 +248,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.22 · compact matching tiles</p>
+      <p className="meta">v1.1.23 · spacing and thin icons</p>
     </div>
   );
 }
@@ -401,5 +401,61 @@ function LogoMark() {
       <rect x="10" y="38" width="24" height="24" rx="6" fill="#5a8fc7" />
       <rect x="38" y="38" width="24" height="24" rx="6" fill="#c46b8a" />
     </svg>
+  );
+}
+
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {children}
+    </svg>
+  );
+}
+
+function IconVolume() {
+  return (
+    <Icon>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </Icon>
+  );
+}
+
+function IconVolumeOff() {
+  return (
+    <Icon>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <line x1="22" x2="16" y1="9" y2="15" />
+      <line x1="16" x2="22" y1="9" y2="15" />
+    </Icon>
+  );
+}
+
+function IconUndo() {
+  return (
+    <Icon>
+      <path d="M3 7v6h6" />
+      <path d="M3 13a9 9 0 1 0 3-7.2L3 13" />
+    </Icon>
+  );
+}
+
+function IconPause() {
+  return (
+    <Icon>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </Icon>
   );
 }

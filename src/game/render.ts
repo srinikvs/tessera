@@ -57,8 +57,9 @@ export function computeLayout(
   const top = Math.max(0, inset.top ?? 0);
   const bottom = Math.max(0, inset.bottom ?? 0);
   const innerH = Math.max(1, h - top - bottom);
-  const padX = Math.max(8, Math.round(w * 0.03));
-  const gutter = 8;
+  const padX = Math.max(10, Math.round(w * 0.04));
+  const wide = w >= 640;
+  const gutter = wide ? 12 : 22;
 
   const maxCellW = Math.floor((w - padX * 2) / BOARD_SIZE);
   const maxCellH = Math.floor((innerH - gutter - TRAY_BAND) / BOARD_SIZE);
@@ -67,7 +68,7 @@ export function computeLayout(
   const boardPx = cell * BOARD_SIZE;
   const used = boardPx + gutter + TRAY_BAND;
   const slack = Math.max(0, innerH - used);
-  const boardY = top + Math.floor(slack * 0.35);
+  const boardY = top + Math.floor(slack * (wide ? 0.28 : 0.5));
   const boardX = Math.round((w - boardPx) / 2);
   const slotY = boardY + boardPx + gutter;
   const maxSlotH = Math.max(8, h - bottom - slotY);
