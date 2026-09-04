@@ -242,7 +242,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.15 · placeable tray after every clear</p>
+      <p className="meta">v1.1.16 · remount tray after clear</p>
     </div>
   );
 }

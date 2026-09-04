@@ -360,38 +360,10 @@ export function createEngine(
     phase = "idle";
     finishClearTray();
     persist();
-    repaintFromSave();
-    checkGameOver();
-  }
-
-  function repaintFromSave(): void {
-    const kept = {
-      score,
-      combo,
-      best,
-      tray: tray.map((p) => (pieceOk(p) ? { ...p, cells: p.cells.map(([a, b]) => [a, b] as [number, number]) } : null)),
-    };
     const s = loadSave();
-    if (s && Array.isArray(s.board) && s.board.length === 10) {
-      board = s.board.map((row) => row.slice());
-      score = Math.max(kept.score, s.score || 0);
-      combo = Math.max(kept.combo, s.combo || 0);
-      best = Math.max(kept.best, s.best || 0);
-      const id = { n: Math.max(nextPieceId, s.nextPieceId || 1) };
-      const loaded = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
-      padTray();
-      const loadedN = loaded.filter(pieceOk).length;
-      const keptN = kept.tray.filter(pieceOk).length;
-      tray = loadedN >= keptN ? loaded : kept.tray;
-      nextPieceId = id.n;
-    }
-    screen = "play";
-    phase = "idle";
-    pendingClear = null;
-    setDrag(null);
-    finishClearTray();
-    persist();
-    emitUi();
+    if (s) restoreSave(s);
+    else emitUi();
+    checkGameOver();
   }
 
   function commitPlace(slot: number, piece: Piece, row: number, col: number): void {
@@ -497,17 +469,26 @@ export function createEngine(
   }
 
   function restoreSave(s: NonNullable<ReturnType<typeof loadSave>>): boolean {
-    board = s.board.map((row) => row.slice());
-    const id = { n: s.nextPieceId || 1 };
-    tray = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
+    const keptScore = Math.max(score, s.score || 0);
+    const keptCombo = Math.max(combo, s.combo || 0);
+    const keptBest = Math.max(best, s.best || 0);
+    const keptTray = tray.map((p) =>
+      pieceOk(p) ? { ...p, cells: p.cells.map(([a, b]) => [a, b] as [number, number]) } : null,
+    );
+    board = (s.board || emptyBoard()).map((row) => row.slice());
+    const id = { n: Math.max(nextPieceId, s.nextPieceId || 1) };
+    const loaded = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
     padTray();
+    const loadedN = loaded.filter(pieceOk).length;
+    const keptN = keptTray.filter(pieceOk).length;
+    tray = loadedN >= keptN ? loaded : keptTray;
     nextPieceId = id.n;
-    score = s.score || 0;
-    combo = s.combo || 0;
-    best = Math.max(best, s.best || 0);
+    score = keptScore;
+    combo = keptCombo;
+    best = keptBest;
     resetSession();
     screen = "play";
-    ensurePlayTray(true);
+    finishClearTray();
     persist();
     resize();
     emitUi();
