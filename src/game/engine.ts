@@ -159,6 +159,20 @@ export function createEngine(
     return !!(s && (s.screen === "play" || s.screen === "paused") && s.score > 0);
   }
 
+  function persistPostClear(): void {
+    writeSave(
+      snapshotSave({
+        board: logicalBoard(),
+        tray,
+        score,
+        combo,
+        best,
+        nextPieceId,
+        screen: "play",
+      }),
+    );
+  }
+
   function persist(): void {
     if (screen === "start") return;
     if ((screen === "play" || screen === "ending" || screen === "paused") && !drag) {
@@ -359,7 +373,7 @@ export function createEngine(
     pendingClear = null;
     phase = "idle";
     finishClearTray();
-    persist();
+    persistPostClear();
     const s = loadSave();
     if (s) restoreSave(s);
     else emitUi();
@@ -489,7 +503,7 @@ export function createEngine(
     resetSession();
     screen = "play";
     finishClearTray();
-    persist();
+    persistPostClear();
     resize();
     emitUi();
     return true;
