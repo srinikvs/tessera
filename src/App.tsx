@@ -61,6 +61,7 @@ export function App() {
   return (
     <div className="app">
       <canvas ref={canvasRef} />
+      <span className="ver-chip" aria-label="Version">v1.1.24</span>
 
       {boardLive && (
         <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`}>
@@ -75,6 +76,7 @@ export function App() {
           <div className="score-wrap">
             <span className="label">Score</span>
             <span className="score">{formatScore(ui.score)}</span>
+            <span className="best-line">Best {formatScore(ui.best)}</span>
           </div>
           <div className="actions">
             <button
@@ -116,6 +118,7 @@ export function App() {
         <footer className="foot">
           <span>Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
+          <span>v1.1.24</span>
         </footer>
       )}
 
@@ -233,7 +236,7 @@ function StartPanel({
       <HowTo />
       <div className="actions-col">
         <button type="button" className="btn btn-primary" onClick={onPlay}>
-          Play
+          Start
         </button>
         {canContinue && (
           <button type="button" className="btn btn-outline" onClick={onContinue}>
@@ -242,7 +245,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.23 · tray always refills after a line clear</p>
+      <p className="meta">v1.1.24</p>
     </div>
   );
 }
@@ -336,9 +339,8 @@ function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
     <div
       className={`mini-piece${gray ? " is-gray" : ""}`}
       style={{
-        gridTemplateColumns: `repeat(${cols}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, 1fr)`,
-        aspectRatio: `${cols} / ${rows}`,
+        ["--cols" as string]: String(cols),
+        ["--rows" as string]: String(rows),
       }}
     >
       {Array.from({ length: rows * cols }, (_, i) => {
