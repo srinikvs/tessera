@@ -35,6 +35,26 @@ const WELL_INSET_X = 8;
 const WELL_INSET_Y = 4;
 const TRAY_PIECE_PAD = 6;
 
+/** HTML tray wells are this many board cells tall so typical pieces match the board. */
+export const TRAY_WELL_CELLS = 4;
+
+/**
+ * Tray grid step: board cell size when the piece fits the well, otherwise
+ * contain-fit so a 5-long bar still uses square cells inside the well.
+ */
+export function trayFitCell(
+  boardCell: number,
+  cols: number,
+  rows: number,
+  availW: number,
+  availH: number,
+): number {
+  return Math.max(
+    4,
+    Math.min(boardCell, availW / Math.max(cols, 1), availH / Math.max(rows, 1)),
+  );
+}
+
 export function slotWell(slot: Layout["slots"][number]): {
   x: number;
   y: number;
@@ -124,12 +144,7 @@ export function trayPieceRect(
   const { rows, cols } = pieceBounds(piece.cells);
   const availW = Math.max(1, well.w - TRAY_PIECE_PAD * 2);
   const availH = Math.max(1, well.h - TRAY_PIECE_PAD * 2);
-  // Contain-fit square cells inside the well. Never larger than board cells
-  // so the tray is a scaled-down preview; drag/ghost keep layout.cell.
-  const cell = Math.max(
-    4,
-    Math.min(availW / Math.max(cols, 1), availH / Math.max(rows, 1), layout.cell),
-  );
+  const cell = trayFitCell(layout.cell, cols, rows, availW, availH);
   const pw = cols * cell;
   const ph = rows * cell;
   return {

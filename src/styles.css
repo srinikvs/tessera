@@ -212,7 +212,7 @@ html.tessera-drag .tray-dock {
   pointer-events: none;
   position: absolute;
   inset-inline: 0;
-  bottom: calc(5.75rem + var(--sab));
+  bottom: var(--tessera-dock, calc(5.75rem + var(--sab)));
   z-index: 20;
   display: flex;
   justify-content: space-between;
@@ -238,9 +238,13 @@ html.tessera-drag .tray-dock {
 }
 
 .tray-well {
-  min-height: 4.5rem;
-  height: 18vw;
-  max-height: 5.75rem;
+  /* Same grid step as the canvas board. 18vw/5.75rem used to cap the well
+     shorter than 2 board cells on iPhone-width viewports, so contain-fit
+     tray tiles shrank to ~60–70% of occupied board cells. */
+  --well-rows: 4;
+  min-height: calc(var(--tessera-cell, 28px) * 2 + 0.7rem);
+  height: calc(var(--tessera-cell, 28px) * var(--well-rows) + 0.7rem);
+  max-height: none;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.08);
   border: 1.25px solid rgba(242, 241, 238, 0.18);
@@ -253,7 +257,6 @@ html.tessera-drag .tray-dock {
   overflow: hidden;
   isolation: isolate;
   contain: paint;
-  container-type: size;
   clip-path: inset(0 round 14px);
 }
 
@@ -264,7 +267,15 @@ html.tessera-drag .tray-dock {
 .mini-piece {
   --cols: 1;
   --rows: 1;
-  --cell: min(calc(100cqw / var(--cols)), calc(100cqh / var(--rows)));
+  /* Prefer the board cell. Contain-fit only when the piece is taller/wider
+     than the well (5-long bars). Use px vars from the engine — not 100% or
+     cqw/cqh (percentages in custom props re-resolve per property; cqh
+     contain-fit shrank every piece to the short iPhone well). */
+  --cell: min(
+    var(--tessera-cell, 28px),
+    calc(var(--well-inner-w, 99rem) / var(--cols)),
+    calc(var(--well-inner-h, 99rem) / var(--rows))
+  );
   width: calc(var(--cell) * var(--cols));
   height: calc(var(--cell) * var(--rows));
   max-width: 100%;
@@ -279,8 +290,8 @@ html.tessera-drag .tray-dock {
 
 .mini-piece span {
   border-radius: 4px;
-  width: calc(var(--cell) * 0.88);
-  height: calc(var(--cell) * 0.88);
+  width: var(--tile, calc(var(--cell) - var(--tessera-gap, 2px)));
+  height: var(--tile, calc(var(--cell) - var(--tessera-gap, 2px)));
   margin: auto;
   min-width: 0;
   min-height: 0;
@@ -297,10 +308,6 @@ html.tessera-drag .tray-dock {
   }
   .foot {
     display: none;
-  }
-  .tray-well {
-    height: 5.5rem;
-    max-height: 5.5rem;
   }
 }
 

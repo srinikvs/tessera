@@ -1,4 +1,5 @@
 import { createEngine } from "./game/engine";
+import { trayFitCell, TRAY_WELL_CELLS } from "./game/render";
 import { loadBest, loadSave } from "./game/save";
 import { COLORS } from "./game/theme";
 import type { PublicEngine, TrayView, UiState } from "./game/types";
@@ -21,6 +22,8 @@ const initialUi = (): UiState => {
     tray: [null, null, null],
     trayFits: [true, true, true],
     draggingSlot: null,
+    boardCell: 28,
+    boardGap: 2,
   };
 };
 
@@ -61,7 +64,7 @@ export function App() {
   return (
     <div className="app">
       <canvas ref={canvasRef} />
-      <span className="ver-chip" aria-label="Version">v1.1.24</span>
+      <span className="ver-chip" aria-label="Version">v1.1.25</span>
 
       {boardLive && (
         <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`}>
@@ -118,7 +121,7 @@ export function App() {
         <footer className="foot">
           <span>Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
-          <span>v1.1.24</span>
+          <span>v1.1.25</span>
         </footer>
       )}
 
@@ -138,7 +141,12 @@ export function App() {
               }}
             >
               {ui.tray[i] && ui.draggingSlot !== i ? (
-                <MiniPiece piece={ui.tray[i]!} gray={ui.trayFits[i] === false} />
+                <MiniPiece
+                  piece={ui.tray[i]!}
+                  gray={ui.trayFits[i] === false}
+                  boardCell={ui.boardCell}
+                  boardGap={ui.boardGap}
+                />
               ) : null}
             </button>
           ))}
@@ -245,7 +253,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.24</p>
+      <p className="meta">v1.1.25</p>
     </div>
   );
 }
@@ -321,7 +329,28 @@ function OverPanel({
   );
 }
 
-function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
+function wellInnerSize(boardCell: number): { innerW: number; innerH: number } {
+  const root = document.querySelector(".app") ?? document.documentElement;
+  const cs = getComputedStyle(root);
+  const innerW = parseFloat(cs.getPropertyValue("--well-inner-w"));
+  const innerH = parseFloat(cs.getPropertyValue("--well-inner-h"));
+  return {
+    innerW: Number.isFinite(innerW) && innerW > 0 ? innerW : 200,
+    innerH: Number.isFinite(innerH) && innerH > 0 ? innerH : boardCell * TRAY_WELL_CELLS,
+  };
+}
+
+function MiniPiece({
+  piece,
+  gray,
+  boardCell,
+  boardGap,
+}: {
+  piece: TrayView;
+  gray: boolean;
+  boardCell: number;
+  boardGap: number;
+}) {
   let minR = 0;
   let minC = 0;
   let maxR = 0;
@@ -335,12 +364,17 @@ function MiniPiece({ piece, gray }: { piece: TrayView; gray: boolean }) {
   const rows = maxR - minR + 1;
   const cols = maxC - minC + 1;
   const fill = COLORS[(piece.color - 1 + COLORS.length) % COLORS.length];
+  const { innerW, innerH } = wellInnerSize(boardCell);
+  const cell = trayFitCell(boardCell, cols, rows, innerW, innerH);
+  const tile = Math.max(2, cell - boardGap);
   return (
     <div
       className={`mini-piece${gray ? " is-gray" : ""}`}
       style={{
         ["--cols" as string]: String(cols),
         ["--rows" as string]: String(rows),
+        ["--cell" as string]: `${cell}px`,
+        ["--tile" as string]: `${tile}px`,
       }}
     >
       {Array.from({ length: rows * cols }, (_, i) => {

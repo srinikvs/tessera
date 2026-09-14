@@ -24,6 +24,7 @@ import {
   drawParticles,
   hitTrayPiece,
   pointerToCell,
+  TRAY_WELL_CELLS,
   type Floater,
   type Layout,
   type Particle,
@@ -161,6 +162,8 @@ export function createEngine(
       ),
       trayFits: trayFits.slice(),
       draggingSlot: drag ? drag.slot : null,
+      boardCell: layout.cell,
+      boardGap: layout.gap,
     });
   }
 
@@ -486,10 +489,38 @@ export function createEngine(
     const sat = parseFloat(s.getPropertyValue("--sat")) || 0;
     const sab = parseFloat(s.getPropertyValue("--sab")) || 0;
     const wide = window.matchMedia("(min-width: 640px)").matches;
+    const prevCell = layout.cell;
+    const prevGap = layout.gap;
     layout = computeLayout(w, h, {
       top: sat + 58 + (hint && screen === "play" && !wide ? 36 : 0),
       bottom: sab + TRAY_DOCK + (wide ? 8 : 8),
     });
+    applyBoardCellVars(layout, sab);
+    if (
+      (layout.cell !== prevCell || layout.gap !== prevGap) &&
+      (screen === "play" || screen === "ending" || screen === "paused")
+    ) {
+      emitUi();
+    }
+  }
+
+  function applyBoardCellVars(next: Layout, sab: number): void {
+    const root = canvas.parentElement ?? document.documentElement;
+    const rem =
+      parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const dockW = root instanceof HTMLElement ? root.clientWidth : next.w;
+    // Match .tray-dock padding/gap and .tray-well padding so --cell is px-only
+    // (percentages inside custom props re-resolve against width vs height).
+    const wellInnerW = Math.max(1, (dockW - 2.5 * rem) / 3 - 0.7 * rem - 2.5);
+    const wellInnerH = next.cell * TRAY_WELL_CELLS;
+    const dockVisual =
+      wellInnerH + 0.7 * rem + 0.4 * rem + Math.max(rem, sab + 0.55 * rem);
+    root.style.setProperty("--tessera-cell", `${next.cell}px`);
+    root.style.setProperty("--tessera-gap", `${next.gap}px`);
+    root.style.setProperty("--tessera-tile", `${next.cell - next.gap}px`);
+    root.style.setProperty("--well-inner-w", `${wellInnerW}px`);
+    root.style.setProperty("--well-inner-h", `${wellInnerH}px`);
+    root.style.setProperty("--tessera-dock", `${Math.round(dockVisual)}px`);
   }
 
   function eventPos(e: { clientX: number; clientY: number }): { x: number; y: number } {
