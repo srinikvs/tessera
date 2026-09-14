@@ -24,7 +24,7 @@ import {
   drawParticles,
   hitTrayPiece,
   pointerToCell,
-  TRAY_WELL_CELLS,
+  trayWellInnerSize,
   type Floater,
   type Layout,
   type Particle,
@@ -509,12 +509,13 @@ export function createEngine(
     const rem =
       parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const dockW = root instanceof HTMLElement ? root.clientWidth : next.w;
-    // Match .tray-dock padding/gap and .tray-well padding so --cell is px-only
-    // (percentages inside custom props re-resolve against width vs height).
-    const wellInnerW = Math.max(1, (dockW - 2.5 * rem) / 3 - 0.7 * rem - 2.5);
-    const wellInnerH = next.cell * TRAY_WELL_CELLS;
+    const { innerW: wellInnerW, innerH: wellInnerH } = trayWellInnerSize(
+      dockW,
+      rem,
+      next.cell,
+    );
     const dockVisual =
-      wellInnerH + 0.7 * rem + 0.4 * rem + Math.max(rem, sab + 0.55 * rem);
+      wellInnerH + 0.5 * rem + 0.4 * rem + Math.max(rem, sab + 0.55 * rem);
     root.style.setProperty("--tessera-cell", `${next.cell}px`);
     root.style.setProperty("--tessera-gap", `${next.gap}px`);
     root.style.setProperty("--tessera-tile", `${next.cell - next.gap}px`);

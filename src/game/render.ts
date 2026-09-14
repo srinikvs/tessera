@@ -38,6 +38,26 @@ const TRAY_PIECE_PAD = 6;
 /** HTML tray wells are this many board cells tall so typical pieces match the board. */
 export const TRAY_WELL_CELLS = 4;
 
+/** Dock/well chrome used by CSS and by `trayWellInnerSize` (keep in sync with styles.css). */
+export const TRAY_DOCK_PAD_X_REM = 0.5;
+export const TRAY_DOCK_GAP_REM = 0.35;
+export const TRAY_WELL_PAD_REM = 0.25;
+export const TRAY_WELL_BORDER_PX = 2.5;
+
+export function trayWellInnerSize(
+  dockW: number,
+  rem: number,
+  cell: number,
+): { innerW: number; innerH: number } {
+  const padX = TRAY_DOCK_PAD_X_REM * 2 * rem;
+  const gaps = TRAY_DOCK_GAP_REM * 2 * rem;
+  const wellPad = TRAY_WELL_PAD_REM * 2 * rem;
+  return {
+    innerW: Math.max(1, (dockW - padX - gaps) / 3 - wellPad - TRAY_WELL_BORDER_PX),
+    innerH: cell * TRAY_WELL_CELLS,
+  };
+}
+
 /**
  * Tray grid step: board cell size when the piece fits the well, otherwise
  * contain-fit so a 5-long bar still uses square cells inside the well.
