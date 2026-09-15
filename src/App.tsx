@@ -64,7 +64,7 @@ export function App() {
   return (
     <div className="app">
       <canvas ref={canvasRef} />
-      <span className="ver-chip" aria-label="Version">v1.1.25</span>
+      <span className="ver-chip" aria-label="Version">v1.1.26</span>
 
       {boardLive && (
         <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`}>
@@ -121,7 +121,7 @@ export function App() {
         <footer className="foot">
           <span>Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
-          <span>v1.1.25</span>
+          <span>v1.1.26</span>
         </footer>
       )}
 
@@ -253,7 +253,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.25</p>
+      <p className="meta">v1.1.26</p>
     </div>
   );
 }

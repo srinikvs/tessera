@@ -30,12 +30,14 @@ export interface Floater {
   color: string;
 }
 
-const TRAY_UNITS = 4;
 const WELL_INSET_X = 8;
 const WELL_INSET_Y = 4;
 const TRAY_PIECE_PAD = 6;
 
-/** HTML tray wells are this many board cells tall so typical pieces match the board. */
+/**
+ * Shared tray-height in board cells: HTML well (`trayWellInnerSize`) and
+ * `computeLayout` reservation. One constant so they cannot silently diverge.
+ */
 export const TRAY_WELL_CELLS = 4;
 
 /** Dock/well chrome used by CSS and by `trayWellInnerSize` (keep in sync with styles.css). */
@@ -54,7 +56,9 @@ export function trayWellInnerSize(
   const wellPad = TRAY_WELL_PAD_REM * 2 * rem;
   return {
     innerW: Math.max(1, (dockW - padX - gaps) / 3 - wellPad - TRAY_WELL_BORDER_PX),
-    innerH: cell * TRAY_WELL_CELLS,
+    // Declared well height is border-box (`cell * rows + pad`); subtract the
+    // 2.5px border so fitting uses the content box the grid actually has.
+    innerH: Math.max(1, cell * TRAY_WELL_CELLS - TRAY_WELL_BORDER_PX),
   };
 }
 
@@ -101,11 +105,11 @@ export function computeLayout(
   const gutter = 8;
 
   const maxCellW = Math.floor((w - padX * 2) / BOARD_SIZE);
-  const maxCellH = Math.floor((innerH - gutter) / (BOARD_SIZE + TRAY_UNITS));
+  const maxCellH = Math.floor((innerH - gutter) / (BOARD_SIZE + TRAY_WELL_CELLS));
   const cell = Math.max(11, Math.min(56, maxCellW, maxCellH));
   const gap = cell >= 36 ? 3 : cell >= 28 ? 2 : 1.5;
   const boardPx = cell * BOARD_SIZE;
-  const trayH = cell * TRAY_UNITS;
+  const trayH = cell * TRAY_WELL_CELLS;
   const used = boardPx + gutter + trayH;
   const slack = Math.max(0, innerH - used);
   const boardY = top + Math.floor(slack * 0.35);
