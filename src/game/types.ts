@@ -30,6 +30,9 @@ export interface UiState {
   tray: Array<TrayView | null>;
   trayFits: boolean[];
   draggingSlot: number | null;
+  /** Canvas board grid step; tray tiles use the same size when they fit. */
+  boardCell: number;
+  boardGap: number;
 }
 
 export interface PublicEngine {
