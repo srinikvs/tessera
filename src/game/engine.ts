@@ -25,6 +25,7 @@ import {
   hitTrayPiece,
   pointerToCell,
   trayWellInnerSize,
+  TRAY_WELL_BORDER_PX,
   type Floater,
   type Layout,
   type Particle,
@@ -121,6 +122,8 @@ export function createEngine(
   let undo: UndoSnap | null = null;
 
   let layout: Layout = computeLayout(1, 1);
+  let wellInnerW = 0;
+  let wellInnerH = 0;
   let drag: Drag | null = null;
   let dragRect: DOMRect | null = null;
   let raf = 0;
@@ -491,13 +494,18 @@ export function createEngine(
     const wide = window.matchMedia("(min-width: 640px)").matches;
     const prevCell = layout.cell;
     const prevGap = layout.gap;
+    const prevWellInnerW = wellInnerW;
+    const prevWellInnerH = wellInnerH;
     layout = computeLayout(w, h, {
       top: sat + 58 + (hint && screen === "play" && !wide ? 36 : 0),
       bottom: sab + TRAY_DOCK + (wide ? 8 : 8),
     });
     applyBoardCellVars(layout, sab);
     if (
-      (layout.cell !== prevCell || layout.gap !== prevGap) &&
+      (layout.cell !== prevCell ||
+        layout.gap !== prevGap ||
+        wellInnerW !== prevWellInnerW ||
+        wellInnerH !== prevWellInnerH) &&
       (screen === "play" || screen === "ending" || screen === "paused")
     ) {
       emitUi();
@@ -509,13 +517,15 @@ export function createEngine(
     const rem =
       parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const dockW = root instanceof HTMLElement ? root.clientWidth : next.w;
-    const { innerW: wellInnerW, innerH: wellInnerH } = trayWellInnerSize(
-      dockW,
-      rem,
-      next.cell,
-    );
+    const wells = trayWellInnerSize(dockW, rem, next.cell);
+    wellInnerW = wells.innerW;
+    wellInnerH = wells.innerH;
     const dockVisual =
-      wellInnerH + 0.5 * rem + 0.4 * rem + Math.max(rem, sab + 0.55 * rem);
+      wellInnerH +
+      TRAY_WELL_BORDER_PX +
+      0.5 * rem +
+      0.4 * rem +
+      Math.max(rem, sab + 0.55 * rem);
     root.style.setProperty("--tessera-cell", `${next.cell}px`);
     root.style.setProperty("--tessera-gap", `${next.gap}px`);
     root.style.setProperty("--tessera-tile", `${next.cell - next.gap}px`);
