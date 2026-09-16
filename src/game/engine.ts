@@ -26,6 +26,7 @@ import {
   pointerToCell,
   trayWellInnerSize,
   TRAY_WELL_BORDER_PX,
+  TRAY_WELL_CELLS,
   type Floater,
   type Layout,
   type Particle,
@@ -529,6 +530,7 @@ export function createEngine(
     root.style.setProperty("--tessera-cell", `${next.cell}px`);
     root.style.setProperty("--tessera-gap", `${next.gap}px`);
     root.style.setProperty("--tessera-tile", `${next.cell - next.gap}px`);
+    root.style.setProperty("--well-rows", String(TRAY_WELL_CELLS));
     root.style.setProperty("--well-inner-w", `${wellInnerW}px`);
     root.style.setProperty("--well-inner-h", `${wellInnerH}px`);
     root.style.setProperty("--tessera-dock", `${Math.round(dockVisual)}px`);

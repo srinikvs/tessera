@@ -4,14 +4,18 @@ import {
   computeLayout,
   trayFitCell,
   trayWellInnerSize,
-  TRAY_WELL_BORDER_PX,
   TRAY_WELL_CELLS,
 } from "./render";
+
+test("tray wells reserve 5 board cells so a vertical I-bar can match", () => {
+  assert.equal(TRAY_WELL_CELLS, 5);
+});
 
 test("trayFitCell matches the board cell when the well can hold the piece", () => {
   assert.equal(trayFitCell(36, 2, 2, 110, 36 * TRAY_WELL_CELLS), 36);
   assert.equal(trayFitCell(36, 2, 1, 110, 36 * TRAY_WELL_CELLS), 36);
   assert.equal(trayFitCell(36, 1, 1, 110, 36 * TRAY_WELL_CELLS), 36);
+  assert.equal(trayFitCell(36, 1, 5, 110, 36 * TRAY_WELL_CELLS), 36);
 });
 
 test("trayFitCell contain-fits a 5-wide bar that is wider than the well", () => {
@@ -45,14 +49,28 @@ test("well inner width tracks dock width even when board cell is unchanged", () 
   );
 });
 
-test("trayWellInnerSize uses the well content-box height, not border-box", () => {
+test("trayWellInnerSize content height is 5 board cells", () => {
   const cell = 36;
   const { innerH } = trayWellInnerSize(390, 16, cell);
-  assert.equal(innerH, cell * TRAY_WELL_CELLS - TRAY_WELL_BORDER_PX);
-  // A 5-tall bar must fit the content box; using cell*4 would clip by the border.
+  assert.equal(innerH, cell * TRAY_WELL_CELLS);
   const fitted = trayFitCell(cell, 1, 5, 110, innerH);
-  assert.ok(fitted * 5 <= innerH + 1e-9);
-  assert.equal(fitted, innerH / 5);
+  assert.equal(fitted, cell);
+  assert.ok(fitted * 5 <= innerH + 1e-9, "5-tall bar must not exceed the well");
+});
+
+test("iPhone-width layout: 5-tall bar matches the board cell", () => {
+  const layout = computeLayout(390, 844, { top: 58, bottom: 104 });
+  const { innerW, innerH } = trayWellInnerSize(390, 16, layout.cell);
+  assert.ok(innerH >= layout.cell * 5);
+  assert.equal(trayFitCell(layout.cell, 1, 5, innerW, innerH), layout.cell);
+});
+
+test("Pixel-width layout: 5-tall bar matches the board cell", () => {
+  const layout = computeLayout(412, 915, { top: 58, bottom: 104 });
+  const { innerW, innerH } = trayWellInnerSize(412, 16, layout.cell);
+  assert.ok(innerH >= layout.cell * 5);
+  assert.equal(trayFitCell(layout.cell, 1, 5, innerW, innerH), layout.cell);
+  assert.equal(trayFitCell(layout.cell, 2, 2, innerW, innerH), layout.cell);
 });
 
 test("legacy 18vw well would shrink a 2-row piece below the board cell", () => {
