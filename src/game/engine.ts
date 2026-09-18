@@ -376,9 +376,7 @@ export function createEngine(
     phase = "idle";
     finishClearTray();
     persistPostClear();
-    const s = loadSave();
-    if (s) restoreSave(s);
-    else emitUi();
+    emitUi();
     checkGameOver();
   }
 
