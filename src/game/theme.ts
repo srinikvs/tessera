@@ -7,10 +7,11 @@ export const COLORS = [
   "#7a9e6a",
 ];
 
-export const BG = "#262832";
-export const SURFACE = "#2e303c";
-export const FRAME = "#101117";
-export const WELL = "#07080b";
+export const BG = "#0c0d10";
+export const SURFACE = "#16171c";
+export const FRAME = "#1c1d24";
+export const WELL = "#08090c";
+export const CELL_WELL = "#050608";
 export const FG = "#f2f1ee";
 export const MUTED = "#9a9ca6";
 export const DEAD = "#6b6e78";

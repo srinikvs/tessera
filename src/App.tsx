@@ -1,9 +1,8 @@
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createEngine } from "./game/engine";
-import { trayFitCell, TRAY_WELL_CELLS } from "./game/render";
+import { drawPiece } from "./game/render";
 import { loadBest, loadSave } from "./game/save";
-import { COLORS } from "./game/theme";
 import type { PublicEngine, TrayView, UiState } from "./game/types";
-import { useEffect, useRef, useState } from "react";
 
 const initialUi = (): UiState => {
   const save = loadSave();
@@ -22,8 +21,8 @@ const initialUi = (): UiState => {
     tray: [null, null, null],
     trayFits: [true, true, true],
     draggingSlot: null,
-    boardCell: 28,
-    boardGap: 2,
+    trayCell: 22,
+    trayTop: 0,
   };
 };
 
@@ -76,10 +75,18 @@ export function App() {
           >
             Tessera
           </button>
-          <div className="score-wrap">
-            <span className="label">Score</span>
-            <span className="score">{formatScore(ui.score)}</span>
-            <span className="best-line">Best {formatScore(ui.best)}</span>
+          <div className="hud-stats">
+            <div className="hud-stats-row">
+              <div className="score-wrap">
+                <span className="label">Best</span>
+                <span className="score">{formatScore(ui.best)}</span>
+              </div>
+              <div className="score-wrap">
+                <span className="label">Score</span>
+                <span className="score">{formatScore(ui.score)}</span>
+              </div>
+            </div>
+            <span className="hud-cap">{ui.combo > 1 ? `Combo ×${ui.combo}` : "No time limit"}</span>
           </div>
           <div className="actions">
             <button
@@ -89,7 +96,7 @@ export function App() {
               onClick={() => engineRef.current?.toggleMute()}
               disabled={ui.screen === "ending"}
             >
-              {ui.muted ? "🔇" : "🔊"}
+              {ui.muted ? <IconVolumeOff /> : <IconVolume />}
             </button>
             <button
               type="button"
@@ -98,7 +105,7 @@ export function App() {
               disabled={!ui.canUndo || ui.screen === "ending"}
               onClick={() => engineRef.current?.undo()}
             >
-              ↩
+              <IconUndo />
             </button>
             <button
               type="button"
@@ -107,7 +114,7 @@ export function App() {
               disabled={ui.screen === "ending"}
               onClick={() => engineRef.current?.pause()}
             >
-              ❚❚
+              <IconPause />
             </button>
           </div>
         </header>
@@ -117,12 +124,31 @@ export function App() {
         <p className="hint">Drag a block onto the board. A full row or column clears.</p>
       )}
 
-      {ui.screen === "play" && (
-        <footer className="foot">
-          <span>Best {formatScore(ui.best)}</span>
-          {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
-          <span>v1.1.27</span>
-        </footer>
+      {boardLive && (
+        <div
+          className="tray-dock"
+          aria-label="Block tray"
+          style={ui.trayTop > 0 ? { top: ui.trayTop, bottom: "auto" } : undefined}
+        >
+          {[0, 1, 2].map((i) => (
+            <button
+              key={i}
+              type="button"
+              className="tray-well"
+              aria-label={`Tray slot ${i + 1}`}
+              disabled={ui.screen === "ending"}
+              onPointerDown={(e) => {
+                if (ui.screen !== "play") return;
+                e.preventDefault();
+                engineRef.current?.beginTrayDrag(i, e);
+              }}
+            >
+              {ui.tray[i] && ui.draggingSlot !== i ? (
+                <MiniPiece piece={ui.tray[i]!} gray={ui.trayFits[i] === false} cell={ui.trayCell} />
+              ) : null}
+            </button>
+          ))}
+        </div>
       )}
 
       {boardLive && (
@@ -253,7 +279,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.27</p>
+      <p className="meta">v1.1.22</p>
     </div>
   );
 }
@@ -329,62 +355,54 @@ function OverPanel({
   );
 }
 
-function wellInnerSize(boardCell: number): { innerW: number; innerH: number } {
-  const root = document.querySelector(".app") ?? document.documentElement;
-  const cs = getComputedStyle(root);
-  const innerW = parseFloat(cs.getPropertyValue("--well-inner-w"));
-  const innerH = parseFloat(cs.getPropertyValue("--well-inner-h"));
-  return {
-    innerW: Number.isFinite(innerW) && innerW > 0 ? innerW : 200,
-    innerH: Number.isFinite(innerH) && innerH > 0 ? innerH : boardCell * TRAY_WELL_CELLS,
-  };
-}
-
-function MiniPiece({
-  piece,
-  gray,
-  boardCell,
-  boardGap,
-}: {
-  piece: TrayView;
-  gray: boolean;
-  boardCell: number;
-  boardGap: number;
-}) {
-  let minR = 0;
-  let minC = 0;
-  let maxR = 0;
-  let maxC = 0;
-  for (const [r, c] of piece.cells) {
-    if (r < minR) minR = r;
-    if (c < minC) minC = c;
-    if (r > maxR) maxR = r;
-    if (c > maxC) maxC = c;
-  }
-  const rows = maxR - minR + 1;
-  const cols = maxC - minC + 1;
-  const fill = COLORS[(piece.color - 1 + COLORS.length) % COLORS.length];
-  const { innerW, innerH } = wellInnerSize(boardCell);
-  const cell = trayFitCell(boardCell, cols, rows, innerW, innerH);
-  const tile = Math.max(2, cell - boardGap);
-  return (
-    <div
-      className={`mini-piece${gray ? " is-gray" : ""}`}
-      style={{
-        ["--cols" as string]: String(cols),
-        ["--rows" as string]: String(rows),
-        ["--cell" as string]: `${cell}px`,
-        ["--tile" as string]: `${tile}px`,
-      }}
-    >
-      {Array.from({ length: rows * cols }, (_, i) => {
-        const r = Math.floor(i / cols) + minR;
-        const c = (i % cols) + minC;
-        const on = piece.cells.some(([rr, cc]) => rr === r && cc === c);
-        return <span key={i} style={on ? { background: fill } : undefined} />;
-      })}
-    </div>
-  );
+function MiniPiece({ piece, gray, cell: tile }: { piece: TrayView; gray: boolean; cell: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const paint = () => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      let minR = Infinity;
+      let minC = Infinity;
+      let maxR = -Infinity;
+      let maxC = -Infinity;
+      for (const [r, c] of piece.cells) {
+        if (r < minR) minR = r;
+        if (c < minC) minC = c;
+        if (r > maxR) maxR = r;
+        if (c > maxC) maxC = c;
+      }
+      const rows = Math.max(1, maxR - minR + 1);
+      const cols = Math.max(1, maxC - minC + 1);
+      const cell = Math.max(20, Math.min(24, tile || 22));
+      const gap = cell >= 22 ? 2.5 : 2;
+      const w = cols * cell;
+      const h = rows * cell;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      drawPiece(
+        ctx,
+        {
+          id: 0,
+          color: piece.color,
+          cells: piece.cells.map(([r, c]) => [r - minR, c - minC] as [number, number]),
+        },
+        0,
+        0,
+        cell,
+        gap,
+        { gray },
+      );
+    };
+    paint();
+  }, [piece, gray, tile]);
+  return <canvas ref={ref} className="tray-tiles" aria-hidden />;
 }
 
 function HowTo() {
@@ -414,5 +432,61 @@ function LogoMark() {
       <rect x="10" y="38" width="24" height="24" rx="6" fill="#5a8fc7" />
       <rect x="38" y="38" width="24" height="24" rx="6" fill="#c46b8a" />
     </svg>
+  );
+}
+
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {children}
+    </svg>
+  );
+}
+
+function IconVolume() {
+  return (
+    <Icon>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </Icon>
+  );
+}
+
+function IconVolumeOff() {
+  return (
+    <Icon>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <line x1="22" x2="16" y1="9" y2="15" />
+      <line x1="16" x2="22" y1="9" y2="15" />
+    </Icon>
+  );
+}
+
+function IconUndo() {
+  return (
+    <Icon>
+      <path d="M3 7v6h6" />
+      <path d="M3 13a9 9 0 1 0 3-7.2L3 13" />
+    </Icon>
+  );
+}
+
+function IconPause() {
+  return (
+    <Icon>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </Icon>
   );
 }

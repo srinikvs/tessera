@@ -1,5 +1,5 @@
 import { BOARD_SIZE, type Board, type Piece, type Shape } from "./types";
-import { COLORS, DEAD, DEAD_HI, FRAME, GHOST_BAD, GHOST_OK, MUTED, WELL } from "./theme";
+import { CELL_WELL, COLORS, DEAD, DEAD_HI, FRAME, MUTED, WELL } from "./theme";
 
 export interface Layout {
   w: number;
@@ -102,22 +102,20 @@ export function computeLayout(
   const top = Math.max(0, inset.top ?? 0);
   const bottom = Math.max(0, inset.bottom ?? 0);
   const innerH = Math.max(1, h - top - bottom);
-  const padX = Math.max(8, Math.round(w * 0.03));
-  const gutter = 8;
+  const padX = Math.max(10, Math.round(w * 0.04));
+  const wide = w >= 640;
+  const gutter = wide ? 8 : 8;
 
   const maxCellW = Math.floor((w - padX * 2) / BOARD_SIZE);
-  const maxCellH = Math.floor((innerH - gutter) / (BOARD_SIZE + TRAY_WELL_CELLS));
+  const maxCellH = Math.floor((innerH - gutter) / BOARD_SIZE);
   const cell = Math.max(11, Math.min(56, maxCellW, maxCellH));
   const gap = cell >= 36 ? 3 : cell >= 28 ? 2 : 1.5;
   const boardPx = cell * BOARD_SIZE;
-  const trayH = cell * TRAY_WELL_CELLS;
-  const used = boardPx + gutter + trayH;
-  const slack = Math.max(0, innerH - used);
-  const boardY = top + Math.floor(slack * 0.35);
   const boardX = Math.round((w - boardPx) / 2);
+  const boardY = Math.max(top, h - bottom - gutter - boardPx);
   const slotY = boardY + boardPx + gutter;
-  const maxSlotH = Math.max(8, h - bottom - slotY);
-  const slotH = Math.max(8, Math.min(trayH, maxSlotH));
+  const maxSlotH = Math.max(8, h - slotY);
+  const slotH = maxSlotH;
   const slotW = w / 3;
   const slots = [0, 1, 2].map((i) => ({
     x: i * slotW,
@@ -169,7 +167,12 @@ export function trayPieceRect(
   const { rows, cols } = pieceBounds(piece.cells);
   const availW = Math.max(1, well.w - TRAY_PIECE_PAD * 2);
   const availH = Math.max(1, well.h - TRAY_PIECE_PAD * 2);
-  const cell = trayFitCell(layout.cell, cols, rows, availW, availH);
+  // Contain-fit square cells inside the well. Never larger than board cells
+  // so the tray is a scaled-down preview; drag/ghost keep layout.cell.
+  const cell = Math.max(
+    4,
+    Math.min(availW / Math.max(cols, 1), availH / Math.max(rows, 1), 22, layout.cell),
+  );
   const pw = cols * cell;
   const ph = rows * cell;
   return {
@@ -245,7 +248,7 @@ function shade(hex: string, amount: number): string {
 }
 
 export function drawBoardFrame(ctx: CanvasRenderingContext2D, layout: Layout): void {
-  const pad = 10;
+  const pad = 7;
   ctx.fillStyle = FRAME;
   ctx.beginPath();
   roundRect(
@@ -254,16 +257,13 @@ export function drawBoardFrame(ctx: CanvasRenderingContext2D, layout: Layout): v
     layout.boardY - pad,
     layout.boardPx + pad * 2,
     layout.boardPx + pad * 2,
-    12,
+    16,
   );
   ctx.fill();
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur = 18;
-  ctx.shadowOffsetY = 3;
+  ctx.beginPath();
+  roundRect(ctx, layout.boardX, layout.boardY, layout.boardPx, layout.boardPx, 6);
   ctx.fillStyle = WELL;
-  ctx.fillRect(layout.boardX, layout.boardY, layout.boardPx, layout.boardPx);
-  ctx.restore();
+  ctx.fill();
 }
 
 export function drawBoard(
@@ -276,8 +276,10 @@ export function drawBoard(
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const { x, y, s } = cellRect(layout, r, c);
-      ctx.fillStyle = "rgba(255,255,255,0.03)";
-      ctx.fillRect(x, y, s, s);
+      ctx.fillStyle = CELL_WELL;
+      ctx.beginPath();
+      roundRect(ctx, x, y, s, s, Math.max(3, s * 0.18));
+      ctx.fill();
       const v = board[r][c];
       if (!v) continue;
       const key = `${r},${c}`;
@@ -363,16 +365,16 @@ export function drawGhost(
   col: number,
   ok: boolean,
 ): void {
+  ctx.save();
+  ctx.globalAlpha = ok ? 0.5 : 0.38;
   for (const [dr, dc] of piece.cells) {
     const r = row + dr;
     const c = col + dc;
     if (r < 0 || c < 0 || r >= BOARD_SIZE || c >= BOARD_SIZE) continue;
     const { x, y, s } = cellRect(layout, r, c);
-    ctx.fillStyle = ok ? GHOST_OK : GHOST_BAD;
-    ctx.beginPath();
-    roundRect(ctx, x, y, s, s, Math.max(3, s * 0.18));
-    ctx.fill();
+    drawTile(ctx, x, y, s, COLORS[(piece.color - 1) % COLORS.length], !ok);
   }
+  ctx.restore();
 }
 
 export function drawLinePreview(
@@ -456,7 +458,7 @@ export function drawFloaters(ctx: CanvasRenderingContext2D, floaters: Floater[])
     const a = 1 - f.t / 0.9;
     ctx.globalAlpha = Math.max(0, a);
     ctx.fillStyle = f.color;
-    ctx.font = "600 16px system-ui, sans-serif";
+    ctx.font = "600 16px Outfit, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(f.text, f.x, f.y - f.t * 40);
   }
@@ -472,7 +474,7 @@ export function drawCombo(
   const a = t < 0.2 ? t / 0.2 : Math.max(0, 1 - (t - 0.6) / 0.55);
   ctx.globalAlpha = a;
   ctx.fillStyle = MUTED;
-  ctx.font = "600 22px system-ui, sans-serif";
+  ctx.font = "600 22px Fraunces, Georgia, serif";
   ctx.textAlign = "center";
   ctx.fillText(text, layout.boardX + layout.boardPx / 2, layout.boardY - 18);
   ctx.globalAlpha = 1;

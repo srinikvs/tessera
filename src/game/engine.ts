@@ -166,8 +166,8 @@ export function createEngine(
       ),
       trayFits: trayFits.slice(),
       draggingSlot: drag ? drag.slot : null,
-      boardCell: layout.cell,
-      boardGap: layout.gap,
+      trayCell: Math.max(20, Math.min(24, Math.round(layout.cell) || 22)),
+      trayTop: Math.round(layout.boardY + layout.boardPx + 8),
     });
   }
 
@@ -177,9 +177,23 @@ export function createEngine(
     return !!(s && (s.screen === "play" || s.screen === "paused") && s.score > 0);
   }
 
+  function persistPostClear(): void {
+    writeSave(
+      snapshotSave({
+        board: logicalBoard(),
+        tray,
+        score,
+        combo,
+        best,
+        nextPieceId,
+        screen: "play",
+      }),
+    );
+  }
+
   function persist(): void {
     if (screen === "start") return;
-    if ((screen === "play" || screen === "paused" || screen === "ending") && !drag) {
+    if ((screen === "play" || screen === "ending" || screen === "paused") && !drag) {
       ensurePlayTray(false);
     }
     writeSave(
@@ -210,27 +224,107 @@ export function createEngine(
     }
   }
 
-  function ensurePlayTray(fromClear: boolean): void {
-    if (screen !== "play" && screen !== "ending" && screen !== "paused") return;
-    if (fromClear) fillHoles = true;
-    const id = { n: nextPieceId };
-    const allEmpty = tray.every((p) => !pieceOk(p));
-    const mustFill = fillHoles || allEmpty || pendingClear !== null || phase === "clearing";
-    const { tray: next, filled } = ensureTrayNotEmpty(tray, logicalBoard(), id, pickShape, mustFill);
-    tray = next;
-    nextPieceId = id.n;
-    if (tray.every(pieceOk)) fillHoles = false;
-    refreshFits();
-    if (filled > 0) {
-      safeCall(sfxDeal);
-      emitUi();
+  let fillAfterClear = false;
+  let leftoverSlots: number[] = [];
+
+  function pieceOk(p: Piece | null): p is Piece {
+    return !!p && Array.isArray(p.cells) && p.cells.length > 0;
+  }
+
+  function padTray(): void {
+    if (!Array.isArray(tray)) tray = [null, null, null];
+    while (tray.length < 3) tray.push(null);
+    if (tray.length > 3) tray = tray.slice(0, 3);
+  }
+
+  function trayPlaceable(): boolean {
+    const b = logicalBoard();
+    try {
+      return tray.some((p) => pieceOk(p) && anyFit(b, p));
+    } catch {
+      return false;
     }
   }
 
+  function dealFitting(): Piece {
+    const b = logicalBoard();
+    for (let i = 0; i < 48; i++) {
+      const p = pickShape({ n: nextPieceId++ });
+      try {
+        if (anyFit(b, p)) return p;
+      } catch {
+        /* try another */
+      }
+    }
+    return { id: nextPieceId++, color: 1, cells: [[0, 0]] };
+  }
+
+  function fillEmptySlots(): boolean {
+    padTray();
+    const emptyIdx: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      if (!pieceOk(tray[i])) {
+        tray[i] = null;
+        emptyIdx.push(i);
+      }
+    }
+    if (emptyIdx.length === 0) {
+      refreshFits();
+      return false;
+    }
+    for (const i of emptyIdx) {
+      const next = [...tray];
+      next[i] = dealFitting();
+      tray = next;
+    }
+    if (!trayPlaceable()) {
+      const next = [...tray];
+      for (const i of emptyIdx) next[i] = dealFitting();
+      tray = next;
+    }
+    refreshFits();
+    try {
+      sfxDeal();
+    } catch {
+      /* audio must not block a deal */
+    }
+    return true;
+  }
+
+  function finishClearTray(): void {
+    fillAfterClear = true;
+    padTray();
+    if (tray.every((p) => !pieceOk(p))) {
+      leftoverSlots = [];
+      tray = [dealFitting(), dealFitting(), dealFitting()];
+    } else {
+      fillEmptySlots();
+    }
+    if (!trayPlaceable()) {
+      tray = [0, 1, 2].map((i) =>
+        leftoverSlots.includes(i) && pieceOk(tray[i]) ? tray[i] : dealFitting(),
+      );
+    }
+    refreshFits();
+    if (tray.every(pieceOk) && trayPlaceable()) fillAfterClear = false;
+    emitUi();
+  }
+
+  function ensurePlayTray(fromClear: boolean): void {
+    if (fromClear) fillAfterClear = true;
+    if (screen !== "play" && screen !== "ending" && screen !== "paused") return;
+    padTray();
+    const must =
+      fillAfterClear || pendingClear !== null || phase === "clearing" || tray.every((p) => !pieceOk(p));
+    if (must) finishClearTray();
+    else refreshFits();
+  }
+
   function refillTray(): void {
-    tray = [null, null, null];
-    fillHoles = false;
-    ensurePlayTray(false);
+    padTray();
+    for (let i = 0; i < 3; i++) tray[i] = null;
+    fillAfterClear = false;
+    fillEmptySlots();
   }
 
   function beginEnding(): void {
@@ -246,7 +340,6 @@ export function createEngine(
 
   function checkGameOver(): boolean {
     if (phase === "clearing" || pendingClear) return false;
-    ensurePlayTray(false);
     if (anyRemainingFits(logicalBoard(), tray)) return false;
     beginEnding();
     return true;
@@ -308,6 +401,7 @@ export function createEngine(
     };
     board = placeOn(board, piece, row, col);
     tray[slot] = null;
+    leftoverSlots = [0, 1, 2].filter((i) => pieceOk(tray[i]));
     for (const [dr, dc] of piece.cells) {
       pop.set(`${row + dr},${col + dc}`, 0);
     }
@@ -343,10 +437,9 @@ export function createEngine(
       pendingClear = { rows, cols };
       phase = "clearing";
       clearT = 0;
-      fillHoles = true;
       ensurePlayTray(true);
       persist();
-      safeCall(() => {
+      try {
         spawnParticles(rows, cols);
         sfxClear(lines);
         const label = comboLabel(lines, combo);
@@ -354,13 +447,19 @@ export function createEngine(
           comboFx = { text: label, t: 0 };
           sfxCombo();
         }
-      });
+      } catch {
+        /* juice must not block refill */
+      }
       trauma = Math.min(1, trauma + 0.15 + lines * 0.08);
       if (lines >= 3 && !reduced) freeze = 0.05;
       emitUi();
       if (reduced) applyClear();
     } else {
-      safeCall(sfxPlace);
+      try {
+        sfxPlace();
+      } catch {
+        /* ignore */
+      }
       afterPlaceResolved();
     }
   }
@@ -398,26 +497,32 @@ export function createEngine(
   }
 
   function restoreSave(s: NonNullable<ReturnType<typeof loadSave>>): boolean {
+    const keptScore = Math.max(score, s.score || 0);
+    const keptCombo = Math.max(combo, s.combo || 0);
+    const keptBest = Math.max(best, s.best || 0);
+    const keptTray = tray.map((p) =>
+      pieceOk(p) ? { ...p, cells: p.cells.map(([a, b]) => [a, b] as [number, number]) } : null,
+    );
     board = (s.board || emptyBoard()).map((row) => row.slice());
-    const id = { n: s.nextPieceId || 1 };
-    tray = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
-    while (tray.length < 3) tray.push(null);
-    tray = tray.slice(0, 3);
+    const id = { n: Math.max(nextPieceId, s.nextPieceId || 1) };
+    const loaded = Array.isArray(s.tray) ? trayFromSave(s.tray, id) : [null, null, null];
+    padTray();
+    const loadedN = loaded.filter(pieceOk).length;
+    const keptN = keptTray.filter(pieceOk).length;
+    tray = loadedN >= keptN ? loaded : keptTray;
     nextPieceId = id.n;
-    score = s.score || 0;
-    combo = s.combo || 0;
-    best = Math.max(best, s.best || 0);
+    score = keptScore;
+    combo = keptCombo;
+    best = keptBest;
     resetSession();
     screen = "play";
-    // Boot/Continue only. Never remount from disk after a line clear.
-    if (tray.every((p) => !pieceOk(p))) fillHoles = true;
-    ensurePlayTray(tray.every((p) => !pieceOk(p)));
-    persist();
+    finishClearTray();
+    persistPostClear();
     resize();
     emitUi();
     return true;
   }
-
+//Game sliding further
   function continueGame(): void {
     unlockAudio();
     const s = loadSave();
@@ -498,8 +603,8 @@ export function createEngine(
     const prevWellInnerW = wellInnerW;
     const prevWellInnerH = wellInnerH;
     layout = computeLayout(w, h, {
-      top: sat + 58 + (hint && screen === "play" && !wide ? 36 : 0),
-      bottom: sab + TRAY_DOCK + (wide ? 8 : 8),
+      top: sat + (wide ? 56 : 70) + (hint && screen === "play" && !wide ? 28 : 0),
+      bottom: sab + (wide ? 148 : 176),
     });
     applyBoardCellVars(layout, sab);
     if (
@@ -575,10 +680,7 @@ export function createEngine(
     }
   }
 
-  function beginTrayDrag(
-    slot: number,
-    e: { clientX: number; clientY: number; pointerId: number; pointerType: string },
-  ): void {
+  function beginTrayDrag(slot: number, e: { clientX: number; clientY: number; pointerId: number; pointerType: string }): void {
     if (screen !== "play" || phase === "ending") return;
     if (phase === "clearing") applyClear();
     ensurePlayTray(false);
@@ -597,7 +699,11 @@ export function createEngine(
       pointerId: e.pointerId,
       lift: e.pointerType === "mouse" ? 0 : Math.max(36, layout.cell * 0.9),
     });
-    safeCall(sfxPickup);
+    try {
+      sfxPickup();
+    } catch {
+      /* ignore */
+    }
     emitUi();
   }
 
@@ -757,6 +863,8 @@ export function createEngine(
         }
       }
 
+      if (screen === "play" && !drag) ensurePlayTray(false);
+
       if (drag) {
         drawDragPiece(
           ctx,
@@ -787,7 +895,7 @@ export function createEngine(
       if (textA > 0) {
         ctx.globalAlpha = textA;
         ctx.fillStyle = "#f2f1ee";
-        ctx.font = "500 18px system-ui, sans-serif";
+        ctx.font = "500 18px Fraunces, Georgia, serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("No more moves", w / 2, h / 2);
@@ -817,11 +925,11 @@ export function createEngine(
     } catch {
       try {
         ensurePlayTray(true);
-        emitUi();
       } catch {
         /* keep the loop alive */
       }
     }
+    raf = requestAnimationFrame(loop);
   }
 
   function onKey(e: KeyboardEvent): void {
@@ -891,6 +999,7 @@ export function createEngine(
       unlockAudio();
       emitUi();
     },
+    beginTrayDrag,
     destroy: () => {
       running = false;
       cancelAnimationFrame(raf);

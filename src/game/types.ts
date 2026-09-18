@@ -12,7 +12,7 @@ export interface Piece {
 export type Screen = "start" | "play" | "paused" | "ending" | "over";
 
 export interface TrayView {
-  cells: Shape;
+  cells: Array<[number, number]>;
   color: number;
 }
 
@@ -30,9 +30,8 @@ export interface UiState {
   tray: Array<TrayView | null>;
   trayFits: boolean[];
   draggingSlot: number | null;
-  /** Canvas board grid step; tray tiles use the same size when they fit. */
-  boardCell: number;
-  boardGap: number;
+  trayCell: number;
+  trayTop: number;
 }
 
 export interface PublicEngine {
