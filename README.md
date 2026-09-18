@@ -35,6 +35,10 @@ location /tessera/ {
 
 Score, best, and an in-progress run are saved in `localStorage`. Refreshing `/tessera/` resumes the board.
 
+## Test
+
+See [TESTING.md](TESTING.md) for unit tests, Playwright (browser + Pixel 7a), `BASE_URL` playaddatest smoke, and Jenkins `tessera-test`.
+
 ## Stack
 
 - Vite + React 19 + TypeScript

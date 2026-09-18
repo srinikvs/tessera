@@ -142,6 +142,35 @@ test("ensureTrayNotEmpty heals an all-null playable tray", () => {
   assert.ok(next.every(pieceOk));
 });
 
+test("after any clear while the game is not over, the tray is never stuck empty", () => {
+  const rowClear = emptyBoard();
+  fillRow(rowClear, 9, 0);
+  const colClear = emptyBoard();
+  for (let r = 0; r < 10; r++) {
+    if (r !== 0) colClear[r][4] = 1;
+  }
+
+  for (const [label, board, at] of [
+    ["row", rowClear, { r: 9, c: 0 }] as const,
+    ["col", colClear, { r: 0, c: 4 }] as const,
+  ]) {
+    const last: Piece = { id: 1, color: 4, cells: [[0, 0]] };
+    let tray: Array<Piece | null> = [last, null, null];
+    const placed = placeOn(board, last, at.r, at.c);
+    tray[0] = null;
+    const { rows, cols } = findFullLines(placed);
+    assert.ok(rows.length + cols.length > 0, `${label}: expected a clear`);
+    const cleared = applyLineClear(placed, rows, cols);
+    const { tray: next } = refillAfterPlace(tray, cleared, { n: 20 }, (n) => pickShape(n), true);
+    assert.ok(
+      next.some(pieceOk),
+      `${label}: tray must not be empty after a clear while playable`,
+    );
+    assert.ok(next.every(pieceOk), `${label}: empty wells fill after a clear`);
+    assert.ok(trayHasPlaceable(cleared, next), `${label}: game is not over`);
+  }
+});
+
 test("ensureTrayNotEmpty with fillHoles fills leftover empty wells", () => {
   const leftover = { ...BAR, id: 9 };
   const { tray: next } = ensureTrayNotEmpty([null, leftover, null], emptyBoard(), { n: 1 }, dealSeq([MONO, MONO]), true);
