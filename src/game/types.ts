@@ -41,6 +41,9 @@ export interface PublicEngine {
   pause: () => void;
   resume: () => void;
   toggleMute: () => void;
-  beginTrayDrag: (slot: number, e: { clientX: number; clientY: number; pointerId: number; pointerType: string }) => void;
+  beginTrayDrag: (
+    slot: number,
+    e: { clientX: number; clientY: number; pointerId: number; pointerType: string },
+  ) => void;
   destroy: () => void;
 }

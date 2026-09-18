@@ -63,6 +63,7 @@ export function App() {
   return (
     <div className="app">
       <canvas ref={canvasRef} />
+      <span className="ver-chip" aria-label="Version">v1.1.27</span>
 
       {boardLive && (
         <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`}>
@@ -144,6 +145,34 @@ export function App() {
             >
               {ui.tray[i] && ui.draggingSlot !== i ? (
                 <MiniPiece piece={ui.tray[i]!} gray={ui.trayFits[i] === false} cell={ui.trayCell} />
+              ) : null}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {boardLive && (
+        <div className="tray-dock" aria-label="Block tray">
+          {[0, 1, 2].map((i) => (
+            <button
+              key={i}
+              type="button"
+              className="tray-well"
+              aria-label={`Tray slot ${i + 1}`}
+              disabled={ui.screen === "ending"}
+              onPointerDown={(e) => {
+                if (ui.screen !== "play") return;
+                e.preventDefault();
+                engineRef.current?.beginTrayDrag(i, e);
+              }}
+            >
+              {ui.tray[i] && ui.draggingSlot !== i ? (
+                <MiniPiece
+                  piece={ui.tray[i]!}
+                  gray={ui.trayFits[i] === false}
+                  boardCell={ui.boardCell}
+                  boardGap={ui.boardGap}
+                />
               ) : null}
             </button>
           ))}
@@ -241,7 +270,7 @@ function StartPanel({
       <HowTo />
       <div className="actions-col">
         <button type="button" className="btn btn-primary" onClick={onPlay}>
-          Play
+          Start
         </button>
         {canContinue && (
           <button type="button" className="btn btn-outline" onClick={onContinue}>

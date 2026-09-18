@@ -24,6 +24,9 @@ import {
   drawParticles,
   hitTrayPiece,
   pointerToCell,
+  trayWellInnerSize,
+  TRAY_WELL_BORDER_PX,
+  TRAY_WELL_CELLS,
   type Floater,
   type Layout,
   type Particle,
@@ -54,6 +57,7 @@ import {
   unlockAudio,
 } from "./audio";
 import { BOARD_SIZE, type Board, type Piece, type PublicEngine, type Screen, type UiState } from "./types";
+import { ensureTrayNotEmpty, pieceOk } from "./tray";
 
 interface Drag {
   slot: number;
@@ -77,6 +81,7 @@ const POP_DUR = 0.16;
 const CLEAR_FLASH = 0.12;
 const CLEAR_SHRINK = 0.2;
 const END_HOLD = 3;
+const TRAY_DOCK = 96;
 
 function easeOutBack(t: number): number {
   const c1 = 1.70158;
@@ -87,6 +92,14 @@ function easeOutBack(t: number): number {
 function hashNoise(n: number): number {
   const s = Math.sin(n * 127.1) * 43758.5453;
   return (s - Math.floor(s)) * 2 - 1;
+}
+
+function safeCall(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    /* juice / audio must not block refill */
+  }
 }
 
 export function createEngine(
@@ -110,6 +123,8 @@ export function createEngine(
   let undo: UndoSnap | null = null;
 
   let layout: Layout = computeLayout(1, 1);
+  let wellInnerW = 0;
+  let wellInnerH = 0;
   let drag: Drag | null = null;
   let dragRect: DOMRect | null = null;
   let raf = 0;
@@ -129,6 +144,7 @@ export function createEngine(
   let clearT = 0;
   let endingT = 0;
   let pendingClear: { rows: number[]; cols: number[] } | null = null;
+  let fillHoles = false;
   const dprCap = 2;
 
   setMuted(muted);
@@ -317,11 +333,7 @@ export function createEngine(
     phase = "ending";
     endingT = 0;
     screen = "ending";
-    try {
-      sfxOver();
-    } catch {
-      /* ignore */
-    }
+    safeCall(sfxOver);
     persist();
     emitUi();
   }
@@ -374,8 +386,8 @@ export function createEngine(
     board = applyLineClear(board, pendingClear.rows, pendingClear.cols);
     pendingClear = null;
     phase = "idle";
-    finishClearTray();
-    persistPostClear();
+    ensurePlayTray(true);
+    persist();
     emitUi();
     checkGameOver();
   }
@@ -383,7 +395,7 @@ export function createEngine(
   function commitPlace(slot: number, piece: Piece, row: number, col: number): void {
     undo = {
       board: cloneBoard(board),
-      tray: tray.map((p) => (p ? { ...p, cells: [...p.cells] } : null)),
+      tray: tray.map((p) => (pieceOk(p) ? { ...p, cells: [...p.cells] } : null)),
       score,
       combo,
     };
@@ -417,7 +429,8 @@ export function createEngine(
     if (hint) {
       hint = false;
       writeHintSeen();
-      resize();
+      // Do not resize here — iOS visualViewport often dips mid-gesture and
+      // that used to shove the tray off-screen right after a first clear.
     }
 
     if (lines > 0) {
@@ -463,6 +476,7 @@ export function createEngine(
     clearT = 0;
     trauma = 0;
     freeze = 0;
+    fillHoles = false;
     setDrag(null);
   }
 
@@ -553,6 +567,7 @@ export function createEngine(
     score = undo.score;
     combo = undo.combo;
     undo = null;
+    fillHoles = false;
     refreshFits();
     persist();
     emitUi();
@@ -583,10 +598,47 @@ export function createEngine(
     const sat = parseFloat(s.getPropertyValue("--sat")) || 0;
     const sab = parseFloat(s.getPropertyValue("--sab")) || 0;
     const wide = window.matchMedia("(min-width: 640px)").matches;
+    const prevCell = layout.cell;
+    const prevGap = layout.gap;
+    const prevWellInnerW = wellInnerW;
+    const prevWellInnerH = wellInnerH;
     layout = computeLayout(w, h, {
       top: sat + (wide ? 56 : 70) + (hint && screen === "play" && !wide ? 28 : 0),
       bottom: sab + (wide ? 148 : 176),
     });
+    applyBoardCellVars(layout, sab);
+    if (
+      (layout.cell !== prevCell ||
+        layout.gap !== prevGap ||
+        wellInnerW !== prevWellInnerW ||
+        wellInnerH !== prevWellInnerH) &&
+      (screen === "play" || screen === "ending" || screen === "paused")
+    ) {
+      emitUi();
+    }
+  }
+
+  function applyBoardCellVars(next: Layout, sab: number): void {
+    const root = canvas.parentElement ?? document.documentElement;
+    const rem =
+      parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const dockW = root instanceof HTMLElement ? root.clientWidth : next.w;
+    const wells = trayWellInnerSize(dockW, rem, next.cell);
+    wellInnerW = wells.innerW;
+    wellInnerH = wells.innerH;
+    const dockVisual =
+      wellInnerH +
+      TRAY_WELL_BORDER_PX +
+      0.5 * rem +
+      0.4 * rem +
+      Math.max(rem, sab + 0.55 * rem);
+    root.style.setProperty("--tessera-cell", `${next.cell}px`);
+    root.style.setProperty("--tessera-gap", `${next.gap}px`);
+    root.style.setProperty("--tessera-tile", `${next.cell - next.gap}px`);
+    root.style.setProperty("--well-rows", String(TRAY_WELL_CELLS));
+    root.style.setProperty("--well-inner-w", `${wellInnerW}px`);
+    root.style.setProperty("--well-inner-h", `${wellInnerH}px`);
+    root.style.setProperty("--tessera-dock", `${Math.round(dockVisual)}px`);
   }
 
   function eventPos(e: { clientX: number; clientY: number }): { x: number; y: number } {
@@ -623,7 +675,7 @@ export function createEngine(
     if (canPlace(board, d.piece, row, col)) {
       commitPlace(d.slot, d.piece, row, col);
     } else {
-      sfxReject();
+      safeCall(sfxReject);
       emitUi();
     }
   }
@@ -854,6 +906,7 @@ export function createEngine(
 
   function loop(now: number): void {
     if (!running) return;
+    raf = requestAnimationFrame(loop);
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
     try {
@@ -924,6 +977,7 @@ export function createEngine(
     newGame,
     continueGame,
     undo: doUndo,
+    beginTrayDrag,
     pause: () => {
       if (screen === "play" && phase !== "ending") {
         screen = "paused";
