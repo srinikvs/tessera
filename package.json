@@ -1,13 +1,13 @@
 {
   "name": "tessera",
   "private": true,
-  "version": "1.1.27",
+  "version": "1.1.28",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "tsx --test src/game/tray.test.ts src/game/render.test.ts"
+    "test": "tsx --test src/game/tray.test.ts src/game/render.test.ts src/game/logic.test.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

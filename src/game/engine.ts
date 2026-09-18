@@ -1,7 +1,6 @@
 import {
   anyFit,
   anyRemainingFits,
-  applyLineClear,
   canPlace,
   cloneBoard,
   comboLabel,
@@ -10,6 +9,7 @@ import {
   hasProgress,
   placeOn,
   scoreFor,
+  settleSunilown,
 } from "./logic";
 import { pickShape } from "./pieces";
 import {
@@ -197,7 +197,7 @@ export function createEngine(
   }
 
   function logicalBoard(): Board {
-    if (pendingClear) return applyLineClear(board, pendingClear.rows, pendingClear.cols);
+    if (pendingClear) return settleSunilown(board).board;
     return board;
   }
 
@@ -290,7 +290,7 @@ export function createEngine(
 
   function applyClear(): void {
     if (!pendingClear) return;
-    board = applyLineClear(board, pendingClear.rows, pendingClear.cols);
+    board = settleSunilown(board).board;
     pendingClear = null;
     phase = "idle";
     ensurePlayTray(true);
@@ -311,8 +311,9 @@ export function createEngine(
     for (const [dr, dc] of piece.cells) {
       pop.set(`${row + dr},${col + dc}`, 0);
     }
-    const { rows, cols } = findFullLines(board);
-    const lines = rows.length + cols.length;
+    const settled = settleSunilown(board);
+    const lines = settled.waves.reduce((n, w) => n + w.rows.length + w.cols.length, 0);
+    const first = settled.waves[0];
     const cells = piece.cells.length;
     if (lines > 0) combo += 1;
     else combo = 0;
@@ -339,15 +340,15 @@ export function createEngine(
       // that used to shove the tray off-screen right after a first clear.
     }
 
-    if (lines > 0) {
-      pendingClear = { rows, cols };
+    if (first) {
+      pendingClear = { rows: first.rows, cols: first.cols };
       phase = "clearing";
       clearT = 0;
       fillHoles = true;
       ensurePlayTray(true);
       persist();
       safeCall(() => {
-        spawnParticles(rows, cols);
+        spawnParticles(first.rows, first.cols);
         sfxClear(lines);
         const label = comboLabel(lines, combo);
         if (label) {

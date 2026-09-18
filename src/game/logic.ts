@@ -66,6 +66,45 @@ export function applyLineClear(board: Board, rows: number[], cols: number[]): Bo
   return next;
 }
 
+/**
+ * Sunilown: remaining rows fall by the number of cleared rows beneath them.
+ * Whole rows move (Tetris gravity). Holes inside a row stay holes.
+ */
+export function applyRowGravity(board: Board, clearedRows: number[]): Board {
+  if (clearedRows.length === 0) return cloneBoard(board);
+  const gone = new Set(clearedRows);
+  const kept: number[][] = [];
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    if (!gone.has(r)) kept.push(board[r].slice());
+  }
+  const next = emptyBoard();
+  const offset = BOARD_SIZE - kept.length;
+  for (let i = 0; i < kept.length; i++) next[offset + i] = kept[i];
+  return next;
+}
+
+export function applyClearWithGravity(board: Board, rows: number[], cols: number[]): Board {
+  const cleared = applyLineClear(board, rows, cols);
+  if (rows.length === 0) return cleared;
+  return applyRowGravity(cleared, rows);
+}
+
+/** Clear lines, apply Sunilown gravity, repeat until no full rows/cols remain. */
+export function settleSunilown(board: Board): {
+  board: Board;
+  waves: Array<{ rows: number[]; cols: number[] }>;
+} {
+  let cur = cloneBoard(board);
+  const waves: Array<{ rows: number[]; cols: number[] }> = [];
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const { rows, cols } = findFullLines(cur);
+    if (rows.length === 0 && cols.length === 0) break;
+    waves.push({ rows, cols });
+    cur = applyClearWithGravity(cur, rows, cols);
+  }
+  return { board: cur, waves };
+}
+
 export function anyRemainingFits(board: Board, tray: Array<Piece | null>): boolean {
   const remaining = tray.filter((p): p is Piece => p !== null);
   if (remaining.length === 0) return true;
