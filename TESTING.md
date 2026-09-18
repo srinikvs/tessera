@@ -1,6 +1,28 @@
 # Testing Tessera
 
-Unit tests (`tsx --test`) plus a Playwright Chromium suite for browser and Pixel 7a (412×915) acceptance. The Jenkins `tessera-test` job on a Linux Builder should run both.
+JSON case files under `tests/cases/` are the **source of truth**. Unit (`npm test`) and Playwright (`npm run test:e2e`) load those files and drive assertions from `steps` / `expect`. Do not add a new Scrutiny scenario only as hard-coded TypeScript.
+
+CSV export of results is optional later. JSON stays canonical. There is no spreadsheet ingest.
+
+## Case files
+
+Path: `tests/cases/*.json` (one case = one object / file).
+
+| Field | Required | Values |
+|---|---|---|
+| `id` | yes | Stable id (`A1`, `B7`, `C14`, …) |
+| `layer` | yes | `unit` \| `e2e` \| `pixel` |
+| `title` | yes | Human-readable name |
+| `steps` | yes | Interpreter ops (`openFresh`, `seedPlay`, `dragTrayToCell`, `scoreForTable`, …) |
+| `expect` | yes | Interpreter asserts (`scoreFor`, `visible`, `boardCell`, `midGap`, …) |
+| `gate` | yes | `block` (fails **TEST PASS**) \| `optional` |
+| `viewport` | no | `desktop` for the 1280×800 smoke; otherwise Pixel project |
+
+**Add a feature:** add or edit a JSON file, then re-run `npm test` and/or `npm run test:e2e`. Extend `tests/cases/unit-runner.ts` or `tests/e2e/case-runner.ts` only when you need a new op/assert.
+
+Gate mapping: E2E **7–11** (`B7`, `B9`, `B10`, `B11a`, `B11b`) and Pixel **14–18** (`C14`–`C18`) use `gate: "block"`. Do not skip, soften, or `fixme` those cases.
+
+Manual-only **D** items are **not** JSON cases and are not executed (see below).
 
 ## Local
 
@@ -8,34 +30,25 @@ Unit tests (`tsx --test`) plus a Playwright Chromium suite for browser and Pixel
 npm install
 npx playwright install --with-deps chromium
 
-npm test                 # unit: tray / render / logic / save / version
-npm run test:e2e         # Playwright pixel + desktop against local vite preview
-npm run test:e2e:pixel   # Pixel 7a project only
-npm run test:e2e:desktop # 1280×800 Start smoke only
+npm test                 # loads tests/cases/*.json (layer=unit) + existing tray/render/logic tests
+npm run test:e2e         # Playwright pixel + desktop; loads e2e/pixel JSON cases
+npm run test:e2e:pixel   # Pixel 7a project only (412×915)
+npm run test:e2e:desktop # 1280×800 Start smoke (B-desktop-start)
 ```
 
 `test:e2e` builds `dist/` and starts `vite preview` at `http://127.0.0.1:4173/tessera/` unless `BASE_URL` is set. Failure screenshots land in `test-results/`.
 
 ## Live smoke (`BASE_URL`)
 
-Point the same suite at a deployed Tessera mount (Playadda test / playaddatest path). The app is served under `/tessera/`:
-
 ```bash
 BASE_URL=https://playaddatest.example/tessera/ npm run test:e2e
 ```
 
-Replace the host with the playaddatest Tessera URL used by your environment. When `BASE_URL` is set, Playwright does not start a local webServer.
+Replace the host with the playaddatest Tessera mount (`/tessera/`). When `BASE_URL` is set, Playwright does not start a local webServer.
 
-Production-shaped local preview (same base path):
+## Jenkins `tessera-ci` / `tessera-test`
 
-```bash
-npm run build
-npm run preview          # http://127.0.0.1:4173/tessera/
-```
-
-## Jenkins Builder (`tessera-test`)
-
-Linux Builder agent, no deploy. Install browser OS deps on the agent (or in the job) before the suite:
+Linux Builder agent. Both jobs run the suite **from the git checkout only** — no Google Sheet, spreadsheet ingest, or CSV import on the agent.
 
 ```bash
 npm ci
@@ -44,35 +57,35 @@ npm test
 npm run test:e2e
 ```
 
-Set `CI=1` so Playwright uses the CI reporter, retries once, and does not reuse an existing preview server. For live playaddatest smoke, export `BASE_URL` to the Tessera path on that host and skip relying on `vite preview`.
+Set `CI=1` so Playwright uses the CI reporter, retries once, and does not reuse an existing preview server. For live playaddatest smoke, export `BASE_URL` to that host’s Tessera path.
 
-## What is automated (A+B+C)
+## Catalog (A–C)
 
-| # | Layer | Gate | Coverage |
+| id | Layer | Gate | Coverage |
 |---|--------|------|----------|
-| 1 | unit | | Row/col clear scoring (`scoreFor`, single + multi) |
-| 2 | unit | | Sunilown: after N row clears, every occupied cell above drops exactly N |
-| 3 | unit | | Tray refill after a clear is never empty while playable |
-| 4 | unit | | Game-over when no legal placement remains |
-| 5 | unit | | Beating Best writes `tessera-best-v1`; reload restores it |
-| 6 | unit | | `VERSION` matches `package.json` / shipped UI tag |
-| 7 | e2e | **FAIL blocks TEST PASS** | How-to-play before play; Start on the same screen |
-| 8 | e2e | | Version ID on launch + HUD (`v1.x.x`) |
-| 9 | e2e | **FAIL blocks TEST PASS** | Best shown; updates without refresh after a beat; survives reload |
-| 10 | e2e | **FAIL blocks TEST PASS** | Place → clear ≥1 line → tray refills |
-| 11 | e2e | **FAIL blocks TEST PASS** | Sunilown +1 after 1-row clear; +2 after 2-row clear |
-| 12 | e2e | | Undo / pause / new-game do not brick tray or score |
-| 13 | e2e | | Hard refresh mid-game does not leave an empty tray |
-| 14 | pixel | **FAIL blocks TEST PASS** | Full board + tray visible; no vertical / home-bar clip |
-| 15 | pixel | **FAIL blocks TEST PASS** | Sane mid-gap (not the rejected v1.1.22 over-tighten) |
-| 16 | pixel | **FAIL blocks TEST PASS** | Tray pieces stay inside well edges |
-| 17 | pixel | **FAIL blocks TEST PASS** | Tray cell matches board cell (±2px) |
-| 18 | pixel | **FAIL blocks TEST PASS** | 5-tall bar unclipped and board-matching (no shrink-to-fit) |
-| 19 | pixel | | Large/complex pieces keep square cells |
+| A1 | unit | optional | Row/col clear scoring (`scoreFor`, single + multi) |
+| A2 | unit | optional | Sunilown: after N row clears, every occupied cell above drops exactly N |
+| A3 | unit | optional | Tray refill after a clear is never empty while playable |
+| A4 | unit | optional | Game-over when no legal placement remains |
+| A5 | unit | optional | Beating Best writes `tessera-best-v1`; reload restores it |
+| A6 | unit | optional | `VERSION` matches `package.json` / shipped UI tag |
+| B7 | e2e | **block** | How-to-play before play; Start on the same screen |
+| B8 | e2e | optional | Version ID on launch + HUD (`v1.x.x`) |
+| B9 | e2e | **block** | Best shown; updates without refresh after a beat; survives reload |
+| B10 | e2e | **block** | Place → clear ≥1 line → tray refills |
+| B11a / B11b | e2e | **block** | Sunilown +1 after 1-row clear; +2 after 2-row clear |
+| B12 | e2e | optional | Undo / pause / new-game do not brick tray or score |
+| B13 | e2e | optional | Hard refresh mid-game does not leave an empty tray |
+| C14 | pixel | **block** | Full board + tray visible; no vertical / home-bar clip |
+| C15 | pixel | **block** | Sane mid-gap (not the rejected v1.1.22 over-tighten) |
+| C16 | pixel | **block** | Tray pieces stay inside well edges |
+| C17 | pixel | **block** | Tray cell matches board cell (±2px) |
+| C18 | pixel | **block** | 5-tall bar unclipped and board-matching (no shrink-to-fit) |
+| C19 | pixel | optional | Large/complex pieces keep square cells |
 
-Items 7–11 and 14–18 are hard failures. Do not skip, soften, or mark them `fixme` / `soft`.
+`src/game/cases.test.ts` fails if a required id is missing or a block case is not `gate: "block"`.
 
-## Manual-only (D — do not automate)
+## Manual-only (D — do not automate, not in JSON)
 
 - iPhone Safari-only visual quirks (dynamic toolbar, `visualViewport` dips, rubber-band).
 - Subjective aesthetics beyond measurable square cells, board/tray cell parity, clip, and mid-gap.
@@ -80,4 +93,4 @@ Items 7–11 and 14–18 are hard failures. Do not skip, soften, or mark them `f
 
 ## Hooks
 
-Stable `data-testid` attributes (`version`, `howto`, `start`, `hud`, `best`, `tray`, `tray-slot-*`, `board`, …). Layout numbers used by E2E (`--tessera-cell`, `--tessera-board-y`, …) are the same CSS variables the engine already writes for the HTML tray. Gameplay logic is unchanged.
+Stable `data-testid` attributes (`version`, `howto`, `start`, `hud`, `best`, `tray`, `tray-slot-*`, `board`, …). Layout numbers used by Pixel cases (`--tessera-cell`, `--tessera-board-y`, …) are the same CSS variables the engine already writes for the HTML tray. Gameplay logic is unchanged.

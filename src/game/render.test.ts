@@ -65,21 +65,6 @@ test("iPhone-width layout: 5-tall bar matches the board cell", () => {
   assert.equal(trayFitCell(layout.cell, 1, 5, innerW, innerH), layout.cell);
 });
 
-test("Pixel 7a layout: full board + 5-cell tray stay on-screen with a sane mid-gap", () => {
-  const layout = computeLayout(412, 915, { top: 58, bottom: 104 });
-  const boardBottom = layout.boardY + layout.boardPx;
-  const trayTop = layout.slots[0].y;
-  const midGap = trayTop - boardBottom;
-  assert.ok(layout.cell >= 28, `expected a usable board cell, got ${layout.cell}`);
-  assert.ok(layout.boardY >= 50, "board must sit below the HUD");
-  assert.ok(midGap >= 8, `mid-gap must not over-tighten (rejected v1.1.22), got ${midGap}`);
-  assert.ok(
-    boardBottom + midGap + layout.slots[0].h <= 915,
-    "tray reservation must stay inside the Pixel CSS viewport",
-  );
-  assert.equal(layout.slots[0].h, layout.cell * TRAY_WELL_CELLS);
-});
-
 test("Pixel-width layout: 5-tall bar matches the board cell", () => {
   const layout = computeLayout(412, 915, { top: 58, bottom: 104 });
   const { innerW, innerH } = trayWellInnerSize(412, 16, layout.cell);

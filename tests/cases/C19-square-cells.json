@@ -1,0 +1,17 @@
+{
+  "id": "C19",
+  "layer": "pixel",
+  "title": "Pixel: large/complex tray pieces keep square cells (no stretched non-square)",
+  "gate": "optional",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 12,
+      "best": 12,
+      "board": { "preset": "empty" },
+      "tray": ["i5Tall", "square", "i5Wide"]
+    },
+    { "op": "waitFilledTray", "min": 3 }
+  ],
+  "expect": [{ "assert": "squareTiles", "slots": [0, 1, 2], "maxDelta": 1.5 }]
+}

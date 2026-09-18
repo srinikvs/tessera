@@ -37,7 +37,7 @@ Score, best, and an in-progress run are saved in `localStorage`. Refreshing `/te
 
 ## Test
 
-See [TESTING.md](TESTING.md) for unit tests, Playwright (browser + Pixel 7a), `BASE_URL` playaddatest smoke, and Jenkins `tessera-test`.
+See [TESTING.md](TESTING.md). Cases live in `tests/cases/*.json` (source of truth). Jenkins `tessera-ci` / `tessera-test` run from git only.
 
 ## Stack
 

@@ -1,0 +1,12 @@
+{
+  "id": "A6",
+  "layer": "unit",
+  "title": "Version string present in build/UI source of truth (package/UI constant matches shipped tag)",
+  "gate": "optional",
+  "steps": [{ "op": "readVersionSources" }],
+  "expect": [
+    { "assert": "versionMatchesPackage" },
+    { "assert": "htmlHasVersionTag", "file": "index.html" },
+    { "assert": "uiUsesVersionLabel", "file": "src/App.tsx" }
+  ]
+}

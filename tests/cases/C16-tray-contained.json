@@ -1,0 +1,17 @@
+{
+  "id": "C16",
+  "layer": "pixel",
+  "title": "Pixel: tray contained — pieces do not overflow tray well edges",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 12,
+      "best": 12,
+      "board": { "preset": "empty" },
+      "tray": ["i5Tall", "square", "i5Wide"]
+    },
+    { "op": "waitFilledTray", "min": 3 }
+  ],
+  "expect": [{ "assert": "trayContained", "slots": [0, 1, 2] }]
+}

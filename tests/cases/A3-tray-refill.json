@@ -1,0 +1,28 @@
+{
+  "id": "A3",
+  "layer": "unit",
+  "title": "Tray refill: after any clear while game not over, tray never stuck empty",
+  "gate": "optional",
+  "steps": [
+    {
+      "op": "clearAndRefill",
+      "kind": "row",
+      "exceptCol": 0,
+      "place": { "piece": "mono", "row": 9, "col": 0 }
+    },
+    { "op": "expect", "assert": "trayNotEmpty" },
+    { "op": "expect", "assert": "trayEveryFilled" },
+    { "op": "expect", "assert": "trayHasPlaceable" },
+    {
+      "op": "clearAndRefill",
+      "kind": "col",
+      "exceptRow": 0,
+      "place": { "piece": "mono", "row": 0, "col": 4 }
+    }
+  ],
+  "expect": [
+    { "assert": "trayNotEmpty" },
+    { "assert": "trayEveryFilled" },
+    { "assert": "trayHasPlaceable" }
+  ]
+}

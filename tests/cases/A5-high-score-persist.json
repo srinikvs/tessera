@@ -1,0 +1,16 @@
+{
+  "id": "A5",
+  "layer": "unit",
+  "title": "High-score persist: beating Best writes localStorage; reload restores Best",
+  "gate": "optional",
+  "steps": [
+    { "op": "persistBest", "priorBest": 10, "score": 42 },
+    { "op": "expect", "assert": "best", "value": 42 },
+    { "op": "expect", "assert": "saveScore", "value": 42 },
+    { "op": "persistBest", "priorBest": 80, "score": 12 }
+  ],
+  "expect": [
+    { "assert": "best", "value": 80 },
+    { "assert": "saveScore", "value": 12 }
+  ]
+}

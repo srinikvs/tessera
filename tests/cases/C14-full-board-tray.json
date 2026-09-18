@@ -1,0 +1,24 @@
+{
+  "id": "C14",
+  "layer": "pixel",
+  "title": "Pixel: full board + tray visible without vertical clip / home-bar cut",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 12,
+      "best": 12,
+      "board": { "preset": "empty" },
+      "tray": ["i5Tall", "square", "i5Wide"]
+    },
+    { "op": "waitFilledTray", "min": 3 }
+  ],
+  "expect": [
+    { "assert": "viewport", "width": 412, "height": 915 },
+    { "assert": "visible", "testId": "hud" },
+    { "assert": "visible", "testId": "tray" },
+    { "assert": "inViewport", "testId": ["hud", "tray", "tray-slot-0", "tray-slot-1", "tray-slot-2"] },
+    { "assert": "boardAboveTray", "minCell": 28, "minBoardPx": 280 },
+    { "assert": "minCell", "value": 28 }
+  ]
+}

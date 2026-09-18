@@ -1,0 +1,22 @@
+{
+  "id": "B13",
+  "layer": "e2e",
+  "title": "Hard refresh mid-game doesn’t leave corrupt empty-tray state",
+  "gate": "optional",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 15,
+      "best": 15,
+      "board": { "preset": "empty" },
+      "tray": ["mono", "square", "i5Tall"]
+    },
+    { "op": "waitFilledTray", "min": 3 },
+    { "op": "reload" }
+  ],
+  "expect": [
+    { "assert": "visible", "testId": "tray" },
+    { "assert": "filledTray", "min": 3, "equals": 3 },
+    { "assert": "score", "value": 15 }
+  ]
+}

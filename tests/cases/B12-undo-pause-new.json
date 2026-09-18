@@ -1,0 +1,37 @@
+{
+  "id": "B12",
+  "layer": "e2e",
+  "title": "Undo/reset/pause don’t brick tray or score",
+  "gate": "optional",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 10,
+      "best": 10,
+      "board": { "preset": "empty" },
+      "tray": ["mono", "square", "vertDomino"]
+    },
+    { "op": "dragTrayToCell", "slot": 0, "row": 0, "col": 0 },
+    { "op": "expect", "assert": "score", "value": 11 },
+    { "op": "expect", "assert": "enabled", "testId": "undo" },
+    { "op": "click", "testId": "undo" },
+    { "op": "expect", "assert": "score", "value": 10 },
+    { "op": "expect", "assert": "filledTray", "min": 3 },
+    { "op": "click", "testId": "pause" },
+    { "op": "expect", "assert": "visible", "testId": "pause-panel" },
+    { "op": "expect", "assert": "heading", "name": "Paused" },
+    { "op": "expect", "assert": "visible", "testId": "howto" },
+    { "op": "click", "testId": "resume" },
+    { "op": "expect", "assert": "visible", "testId": "tray" },
+    { "op": "expect", "assert": "score", "value": 10 },
+    { "op": "expect", "assert": "filledTray", "min": 3 },
+    { "op": "click", "testId": "pause" },
+    { "op": "click", "testId": "new-game" },
+    { "op": "click", "testId": "confirm-new" }
+  ],
+  "expect": [
+    { "assert": "score", "value": 0 },
+    { "assert": "filledTray", "min": 3 },
+    { "assert": "best", "value": 10 }
+  ]
+}
