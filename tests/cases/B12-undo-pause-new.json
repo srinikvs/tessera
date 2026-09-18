@@ -7,7 +7,7 @@
     {
       "op": "seedPlay",
       "score": 10,
-      "best": 10,
+      "best": 100,
       "board": { "preset": "empty" },
       "tray": ["mono", "square", "vertDomino"]
     },
@@ -32,6 +32,6 @@
   "expect": [
     { "assert": "score", "value": 0 },
     { "assert": "filledTray", "min": 3 },
-    { "assert": "best", "value": 10 }
+    { "assert": "best", "value": 100 }
   ]
 }
