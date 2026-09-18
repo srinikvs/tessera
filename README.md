@@ -1,6 +1,6 @@
-# Tessera v1.1.27
+# Tessera v1.1.28
 
-A calm 10×10 block puzzle. Drag polyominoes from the tray onto the board. Completely fill a row or column to clear it. No timer.
+A calm 10×10 block puzzle. Drag polyominoes from the tray onto the board. Completely fill a row or column to clear it. Cleared rows drop every block above them (Sunilown). No timer.
 
 ## Run
 
@@ -30,7 +30,7 @@ location /tessera/ {
 ## Play
 
 1. Drag a block from the tray onto the board. Blocks cannot be rotated.
-2. Completely filling a row or a column clears it.
+2. Completely filling a row or a column clears it. Blocks above a cleared row fall down (Sunilown). Multiple rows in one move each drop by the number of cleared rows beneath them.
 3. Place all three tray pieces to get a new set. Leftover pieces stay after a line clear. Blocks that cannot fit anywhere turn gray. If every leftover block is gray, the game ends.
 
 Score, best, and an in-progress run are saved in `localStorage`. Refreshing `/tessera/` resumes the board.

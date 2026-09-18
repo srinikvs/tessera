@@ -64,7 +64,7 @@ export function App() {
   return (
     <div className="app">
       <canvas ref={canvasRef} />
-      <span className="ver-chip" aria-label="Version">v1.1.27</span>
+      <span className="ver-chip" aria-label="Version">v1.1.28</span>
 
       {boardLive && (
         <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`}>
@@ -114,14 +114,14 @@ export function App() {
       )}
 
       {ui.hint && ui.screen === "play" && (
-        <p className="hint">Drag a block onto the board. A full row or column clears.</p>
+        <p className="hint">Drag a block onto the board. A full row or column clears. Blocks above a cleared row fall.</p>
       )}
 
       {ui.screen === "play" && (
         <footer className="foot">
           <span>Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
-          <span>v1.1.27</span>
+          <span>v1.1.28</span>
         </footer>
       )}
 
@@ -253,7 +253,7 @@ function StartPanel({
         )}
       </div>
       <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.27</p>
+      <p className="meta">v1.1.28</p>
     </div>
   );
 }
@@ -390,7 +390,7 @@ function MiniPiece({
 function HowTo() {
   const steps = [
     "Drag a block from the tray onto the board. Blocks cannot be rotated.",
-    "Completely filling a row or a column clears it and frees that space.",
+    "Completely filling a row or a column clears it. Blocks above a cleared row fall down (Sunilown).",
     "Place all three tray pieces to get a new set. Leftover pieces stay after a line clear. Empty slots fill when a line clears. Blocks that cannot fit anywhere turn gray. If every leftover block is gray, the game ends.",
   ];
   return (
