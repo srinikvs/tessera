@@ -1,0 +1,21 @@
+{
+  "id": "C15",
+  "layer": "pixel",
+  "title": "Pixel: sane mid-gap (not rejected v1.1.22 over-tighten — gap present, tray on-screen)",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 12,
+      "best": 12,
+      "board": { "preset": "empty" },
+      "tray": ["i5Tall", "square", "i5Wide"]
+    },
+    { "op": "waitFilledTray", "min": 3 }
+  ],
+  "expect": [
+    { "assert": "midGap", "min": 8, "max": 320 },
+    { "assert": "inViewport", "testId": ["tray"] },
+    { "assert": "boardAboveTray", "minCell": 28 }
+  ]
+}

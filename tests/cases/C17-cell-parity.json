@@ -1,0 +1,17 @@
+{
+  "id": "C17",
+  "layer": "pixel",
+  "title": "Pixel: tray cell size matches board cell size (±2px)",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 12,
+      "best": 12,
+      "board": { "preset": "empty" },
+      "tray": ["i5Tall", "square", "i5Wide"]
+    },
+    { "op": "waitFilledTray", "min": 3 }
+  ],
+  "expect": [{ "assert": "cellParity", "slot": 1, "maxDelta": 2 }]
+}

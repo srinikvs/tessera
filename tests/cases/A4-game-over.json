@@ -1,0 +1,15 @@
+{
+  "id": "A4",
+  "layer": "unit",
+  "title": "Game-over detection when no legal placement remains",
+  "gate": "optional",
+  "steps": [{ "op": "nop" }],
+  "expect": [
+    { "assert": "anyRemainingFits", "board": { "preset": "full" }, "tray": ["mono"], "value": false },
+    { "assert": "anyRemainingFits", "board": { "preset": "oneHole" }, "tray": ["bar5"], "value": false },
+    { "assert": "anyRemainingFits", "board": { "preset": "oneHole" }, "tray": ["mono"], "value": true },
+    { "assert": "anyRemainingFits", "board": { "preset": "oneHole" }, "tray": ["bar5", "mono"], "value": true },
+    { "assert": "anyRemainingFits", "board": { "preset": "oneHole" }, "tray": ["bar5", "bar5"], "value": false },
+    { "assert": "anyRemainingFits", "board": { "preset": "empty" }, "tray": ["bar5"], "value": true }
+  ]
+}

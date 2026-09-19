@@ -1,0 +1,21 @@
+{
+  "id": "B-desktop-start",
+  "layer": "e2e",
+  "title": "Desktop smoke: Start begins a playable game",
+  "gate": "optional",
+  "viewport": "desktop",
+  "steps": [
+    { "op": "openFresh" },
+    { "op": "expect", "assert": "visible", "testId": "howto" },
+    { "op": "expect", "assert": "visible", "testId": "start" },
+    { "op": "expect", "assert": "text", "testId": "version", "match": "v1\\.\\d+\\.\\d+" },
+    { "op": "click", "testId": "start" }
+  ],
+  "expect": [
+    { "assert": "count", "testId": "start", "value": 0 },
+    { "assert": "visible", "testId": "hud" },
+    { "assert": "visible", "testId": "tray" },
+    { "assert": "filledTray", "min": 3, "equals": 3 },
+    { "assert": "score", "value": 0 }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "A-pixel-layout",
+  "layer": "unit",
+  "title": "Pixel 7a computeLayout: usable cell, on-screen tray, sane mid-gap",
+  "gate": "optional",
+  "steps": [{ "op": "nop" }],
+  "expect": [
+    {
+      "assert": "layout",
+      "width": 412,
+      "height": 915,
+      "top": 58,
+      "bottom": 104,
+      "minCell": 28,
+      "minBoardY": 50,
+      "minMidGap": 8,
+      "trayFitsViewport": true,
+      "trayRows": 5
+    }
+  ]
+}

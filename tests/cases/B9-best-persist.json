@@ -1,0 +1,25 @@
+{
+  "id": "B9",
+  "layer": "e2e",
+  "title": "Best/high score shown; after beating it, Best updates without refresh; survives reload",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 5,
+      "best": 5,
+      "board": { "fillRowExcept": [{ "row": 9, "exceptCol": 0, "color": 2 }] },
+      "tray": ["mono", "square", "vertDomino"]
+    },
+    { "op": "expect", "assert": "best", "value": 5, "storage": true },
+    { "op": "dragTrayToCell", "slot": 0, "row": 9, "col": 0 },
+    { "op": "expect", "assert": "best", "value": 16, "storage": true },
+    { "op": "expect", "assert": "score", "value": 16 },
+    { "op": "reload" }
+  ],
+  "expect": [
+    { "assert": "visible", "testId": "hud" },
+    { "assert": "best", "value": 16, "storage": true },
+    { "assert": "storageBest", "value": 16 }
+  ]
+}

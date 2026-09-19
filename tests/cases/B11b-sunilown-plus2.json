@@ -1,0 +1,27 @@
+{
+  "id": "B11b",
+  "layer": "e2e",
+  "title": "Sunilown E2E: clear 2 rows → y-index of blocks above +2",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 6,
+      "best": 6,
+      "board": {
+        "fillRowExcept": [
+          { "row": 8, "exceptCol": 0, "color": 2 },
+          { "row": 9, "exceptCol": 0, "color": 2 }
+        ],
+        "cells": [[5, 4, 7]]
+      },
+      "tray": ["vertDomino", "mono", "square"]
+    },
+    { "op": "dragTrayToCell", "slot": 0, "row": 8, "col": 0 }
+  ],
+  "expect": [
+    { "assert": "boardCell", "r": 7, "c": 4, "value": 7 },
+    { "assert": "boardCell", "r": 5, "c": 4, "value": 0 },
+    { "assert": "boardCell", "r": 6, "c": 4, "value": 0 }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "C18",
+  "layer": "pixel",
+  "title": "Pixel: 5-tall vertical bar fully unclipped AND board-matching cell size (no shrink-to-fit)",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 12,
+      "best": 12,
+      "board": { "preset": "empty" },
+      "tray": ["i5Tall", "square", "i5Wide"]
+    },
+    { "op": "waitFilledTray", "min": 3 }
+  ],
+  "expect": [
+    { "assert": "cellParity", "slot": 0, "maxDelta": 2 },
+    { "assert": "pieceMinHeight", "slot": 0, "cells": 5 },
+    { "assert": "pieceUnclipped", "slot": 0 },
+    { "assert": "trayContained", "slots": [0] }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "B11a",
+  "layer": "e2e",
+  "title": "Sunilown E2E: clear 1 row → y-index of blocks above +1",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 6,
+      "best": 6,
+      "board": {
+        "fillRowExcept": [{ "row": 9, "exceptCol": 0, "color": 2 }],
+        "cells": [[6, 3, 8]]
+      },
+      "tray": ["mono", "square", "vertDomino"]
+    },
+    { "op": "dragTrayToCell", "slot": 0, "row": 9, "col": 0 }
+  ],
+  "expect": [
+    { "assert": "boardCell", "r": 7, "c": 3, "value": 8 },
+    { "assert": "boardCell", "r": 6, "c": 3, "value": 0 }
+  ]
+}

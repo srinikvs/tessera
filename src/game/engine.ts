@@ -531,6 +531,9 @@ export function createEngine(
     root.style.setProperty("--tessera-cell", `${next.cell}px`);
     root.style.setProperty("--tessera-gap", `${next.gap}px`);
     root.style.setProperty("--tessera-tile", `${next.cell - next.gap}px`);
+    root.style.setProperty("--tessera-board-x", `${next.boardX}px`);
+    root.style.setProperty("--tessera-board-y", `${next.boardY}px`);
+    root.style.setProperty("--tessera-board-px", `${next.boardPx}px`);
     root.style.setProperty("--well-rows", String(TRAY_WELL_CELLS));
     root.style.setProperty("--well-inner-w", `${wellInnerW}px`);
     root.style.setProperty("--well-inner-h", `${wellInnerH}px`);

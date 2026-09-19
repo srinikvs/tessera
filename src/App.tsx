@@ -3,6 +3,7 @@ import { trayFitCell, TRAY_WELL_CELLS } from "./game/render";
 import { loadBest, loadSave } from "./game/save";
 import { COLORS } from "./game/theme";
 import type { PublicEngine, TrayView, UiState } from "./game/types";
+import { VERSION_LABEL } from "./version";
 import { useEffect, useRef, useState } from "react";
 
 const initialUi = (): UiState => {
@@ -62,12 +63,14 @@ export function App() {
     ui.screen === "start" || ui.screen === "paused" || ui.screen === "over";
 
   return (
-    <div className="app">
-      <canvas ref={canvasRef} />
-      <span className="ver-chip" aria-label="Version">v1.1.28</span>
+    <div className="app" data-testid="app">
+      <canvas ref={canvasRef} data-testid="board" />
+      <span className="ver-chip" data-testid="version" aria-label="Version">
+        {VERSION_LABEL}
+      </span>
 
       {boardLive && (
-        <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`}>
+        <header className={`hud${ui.screen === "ending" ? " hud-dim" : ""}`} data-testid="hud">
           <button
             type="button"
             className="title"
@@ -78,8 +81,12 @@ export function App() {
           </button>
           <div className="score-wrap">
             <span className="label">Score</span>
-            <span className="score">{formatScore(ui.score)}</span>
-            <span className="best-line">Best {formatScore(ui.best)}</span>
+            <span className="score" data-testid="score">
+              {formatScore(ui.score)}
+            </span>
+            <span className="best-line" data-testid="best">
+              Best {formatScore(ui.best)}
+            </span>
           </div>
           <div className="actions">
             <button
@@ -94,6 +101,7 @@ export function App() {
             <button
               type="button"
               className="icon-btn"
+              data-testid="undo"
               aria-label="Undo"
               disabled={!ui.canUndo || ui.screen === "ending"}
               onClick={() => engineRef.current?.undo()}
@@ -103,6 +111,7 @@ export function App() {
             <button
               type="button"
               className="icon-btn"
+              data-testid="pause"
               aria-label="Pause"
               disabled={ui.screen === "ending"}
               onClick={() => engineRef.current?.pause()}
@@ -118,20 +127,21 @@ export function App() {
       )}
 
       {ui.screen === "play" && (
-        <footer className="foot">
-          <span>Best {formatScore(ui.best)}</span>
+        <footer className="foot" data-testid="footer">
+          <span data-testid="footer-best">Best {formatScore(ui.best)}</span>
           {ui.combo > 1 ? <span>Combo ×{ui.combo}</span> : <span>No time limit</span>}
-          <span>v1.1.28</span>
+          <span data-testid="footer-version">{VERSION_LABEL}</span>
         </footer>
       )}
 
       {boardLive && (
-        <div className="tray-dock" aria-label="Block tray">
+        <div className="tray-dock" data-testid="tray" aria-label="Block tray">
           {[0, 1, 2].map((i) => (
             <button
               key={i}
               type="button"
               className="tray-well"
+              data-testid={`tray-slot-${i}`}
               aria-label={`Tray slot ${i + 1}`}
               disabled={ui.screen === "ending"}
               onPointerDown={(e) => {
@@ -166,7 +176,7 @@ export function App() {
       )}
 
       {overlay && (
-        <div className="overlay">
+        <div className="overlay" data-testid="overlay">
           {ui.screen === "start" && (
             <StartPanel
               best={ui.best}
@@ -237,23 +247,27 @@ function StartPanel({
   onContinue: () => void;
 }) {
   return (
-    <div className="panel">
+    <div className="panel" data-testid="start-panel">
       <LogoMark />
       <h1>Tessera</h1>
       <p className="tag">Fit the blocks. Clear the lines.</p>
       <HowTo />
       <div className="actions-col">
-        <button type="button" className="btn btn-primary" onClick={onPlay}>
+        <button type="button" className="btn btn-primary" data-testid="start" onClick={onPlay}>
           Start
         </button>
         {canContinue && (
-          <button type="button" className="btn btn-outline" onClick={onContinue}>
+          <button type="button" className="btn btn-outline" data-testid="continue" onClick={onContinue}>
             Continue
           </button>
         )}
       </div>
-      <p className="meta">Best {formatScore(best)}</p>
-      <p className="meta">v1.1.28</p>
+      <p className="meta" data-testid="start-best">
+        Best {formatScore(best)}
+      </p>
+      <p className="meta" data-testid="start-version">
+        {VERSION_LABEL}
+      </p>
     </div>
   );
 }
@@ -272,7 +286,7 @@ function PausePanel({
   onCancelNew: () => void;
 }) {
   return (
-    <div className="panel">
+    <div className="panel" data-testid="pause-panel">
       <h2>{confirmNew ? "Start over?" : "Paused"}</h2>
       <p className="tag">
         {confirmNew
@@ -283,19 +297,19 @@ function PausePanel({
       <div className="actions-col">
         {confirmNew ? (
           <>
-            <button type="button" className="btn btn-primary" onClick={onNew}>
+            <button type="button" className="btn btn-primary" data-testid="confirm-new" onClick={onNew}>
               New game
             </button>
-            <button type="button" className="btn btn-outline" onClick={onCancelNew}>
+            <button type="button" className="btn btn-outline" data-testid="keep-playing" onClick={onCancelNew}>
               Keep playing
             </button>
           </>
         ) : (
           <>
-            <button type="button" className="btn btn-primary" onClick={onResume}>
+            <button type="button" className="btn btn-primary" data-testid="resume" onClick={onResume}>
               Resume
             </button>
-            <button type="button" className="btn btn-outline" onClick={onNew}>
+            <button type="button" className="btn btn-outline" data-testid="new-game" onClick={onNew}>
               New game
             </button>
           </>
@@ -394,7 +408,7 @@ function HowTo() {
     "Place all three tray pieces to get a new set. Leftover pieces stay after a line clear. Empty slots fill when a line clears. Blocks that cannot fit anywhere turn gray. If every leftover block is gray, the game ends.",
   ];
   return (
-    <ol className="howto">
+    <ol className="howto" data-testid="howto">
       {steps.map((step, i) => (
         <li key={step}>
           <span className="n">{i + 1}</span>

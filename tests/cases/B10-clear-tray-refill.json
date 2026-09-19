@@ -1,0 +1,24 @@
+{
+  "id": "B10",
+  "layer": "e2e",
+  "title": "Place pieces → clear ≥1 row/col → tray refills (not empty while playable)",
+  "gate": "block",
+  "steps": [
+    {
+      "op": "seedPlay",
+      "score": 8,
+      "best": 8,
+      "board": { "fillRowExcept": [{ "row": 9, "exceptCol": 0, "color": 2 }] },
+      "tray": ["mono", null, null]
+    },
+    { "op": "expect", "assert": "count", "testId": "tray-slot-0", "selector": ".mini-piece", "value": 1 },
+    { "op": "expect", "assert": "count", "testId": "tray-slot-1", "selector": ".mini-piece", "value": 0 },
+    { "op": "expect", "assert": "count", "testId": "tray-slot-2", "selector": ".mini-piece", "value": 0 },
+    { "op": "dragTrayToCell", "slot": 0, "row": 9, "col": 0 }
+  ],
+  "expect": [
+    { "assert": "boardEmptyRow", "row": 9 },
+    { "assert": "filledTray", "min": 3, "equals": 3 },
+    { "assert": "textNot", "testId": "score", "value": "8" }
+  ]
+}

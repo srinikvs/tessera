@@ -35,6 +35,10 @@ location /tessera/ {
 
 Score, best, and an in-progress run are saved in `localStorage`. Refreshing `/tessera/` resumes the board.
 
+## Test
+
+See [TESTING.md](TESTING.md). Cases live in `tests/cases/*.json` (source of truth). Jenkins `tessera-ci` / `tessera-test` run from git only.
+
 ## Stack
 
 - Vite + React 19 + TypeScript

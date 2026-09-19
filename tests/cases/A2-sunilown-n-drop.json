@@ -1,0 +1,16 @@
+{
+  "id": "A2",
+  "layer": "unit",
+  "title": "Sunilown: after N rows clear, every occupied cell above drops exactly N",
+  "gate": "optional",
+  "steps": [{ "op": "sunilownNDrop" }],
+  "expect": [
+    {
+      "assert": "sunilownExactDrop",
+      "nValues": [1, 2, 3],
+      "markerCols": [0, 3, 7, 9],
+      "noFloaters": true,
+      "noUnderDrop": true
+    }
+  ]
+}
