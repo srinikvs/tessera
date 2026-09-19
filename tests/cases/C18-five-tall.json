@@ -15,8 +15,10 @@
   ],
   "expect": [
     { "assert": "cellParity", "slot": 0, "maxDelta": 2 },
+    { "assert": "noShrinkToFit", "slot": 0, "rows": 5, "maxDelta": 2 },
     { "assert": "pieceMinHeight", "slot": 0, "cells": 5 },
     { "assert": "pieceUnclipped", "slot": 0 },
-    { "assert": "trayContained", "slots": [0] }
+    { "assert": "trayContained", "slots": [0] },
+    { "assert": "tilesInsideWell", "slots": [0], "slop": 2 }
   ]
 }

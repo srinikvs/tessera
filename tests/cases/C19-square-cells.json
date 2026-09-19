@@ -13,5 +13,8 @@
     },
     { "op": "waitFilledTray", "min": 3 }
   ],
-  "expect": [{ "assert": "squareTiles", "slots": [0, 1, 2], "maxDelta": 1.5 }]
+  "expect": [
+    { "assert": "filledTray", "min": 3, "equals": 3 },
+    { "assert": "squareTiles", "slots": [0, 1, 2], "maxDelta": 1.5 }
+  ]
 }

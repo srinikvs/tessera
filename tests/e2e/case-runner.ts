@@ -15,21 +15,28 @@ import {
   waitForFilledTray,
 } from "./helpers.ts";
 
+type TileBox = { w: number; h: number; x: number; y: number };
+
 async function pieceMetrics(page: Page, slot: number) {
   const well = page.getByTestId(`tray-slot-${slot}`);
   const piece = well.locator(".mini-piece");
   await expect(piece).toBeVisible();
   const tiles = await piece.evaluate((el) => {
     const cs = getComputedStyle(el);
-    const spans = [...el.querySelectorAll("span")].filter((s) => {
+    const painted = [...el.querySelectorAll("span")].filter((s) => {
       const bg = getComputedStyle(s).backgroundColor;
       return bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent";
     });
-    const fr = (spans[0] ?? el.querySelector("span"))?.getBoundingClientRect();
+    const boxes: TileBox[] = painted.map((s) => {
+      const r = s.getBoundingClientRect();
+      return { w: r.width, h: r.height, x: r.x, y: r.y };
+    });
+    const fr = boxes[0];
     return {
       cell: parseFloat(cs.getPropertyValue("--cell")),
-      tileW: fr?.width ?? 0,
-      tileH: fr?.height ?? 0,
+      tileW: fr?.w ?? 0,
+      tileH: fr?.h ?? 0,
+      tiles: boxes,
     };
   });
   return {
@@ -37,6 +44,12 @@ async function pieceMetrics(page: Page, slot: number) {
     well: await well.boundingBox(),
     box: await piece.boundingBox(),
   };
+}
+
+function paritySlots(exp: Expectation): number[] {
+  if (Array.isArray(exp.slots)) return exp.slots.map(Number);
+  if (exp.slot != null) return [Number(exp.slot)];
+  return [0];
 }
 
 async function applyExpect(page: Page, exp: Expectation, caseId: string): Promise<void> {
@@ -119,7 +132,8 @@ async function applyExpect(page: Page, exp: Expectation, caseId: string): Promis
       expect(vp, tag).toEqual({ width: Number(exp.width), height: Number(exp.height) });
       return;
     }
-    case "inViewport": {
+    case "inViewport":
+    case "noVerticalClip": {
       const vp = page.viewportSize()!;
       const ids = (Array.isArray(exp.testId) ? exp.testId : [exp.testId]) as string[];
       for (const id of ids) {
@@ -127,6 +141,47 @@ async function applyExpect(page: Page, exp: Expectation, caseId: string): Promis
         expect(box, `${tag} ${id}`).toBeTruthy();
         expect(box!.y, `${tag} ${id} top`).toBeGreaterThanOrEqual(-1);
         expect(box!.y + box!.height, `${tag} ${id} bottom`).toBeLessThanOrEqual(vp.height + 1);
+        expect(box!.x, `${tag} ${id} left`).toBeGreaterThanOrEqual(-1);
+        expect(box!.x + box!.width, `${tag} ${id} right`).toBeLessThanOrEqual(vp.width + 1);
+      }
+      return;
+    }
+    case "boardFullyVisible": {
+      const vp = page.viewportSize()!;
+      const hud = await page.getByTestId("hud").boundingBox();
+      const tray = await page.getByTestId("tray").boundingBox();
+      const m = await boardMetrics(page);
+      expect(hud && tray, tag).toBeTruthy();
+      expect(Number.isFinite(m.cell) && m.cell > 0, `${tag} cell`).toBeTruthy();
+      expect(m.cell, tag).toBeGreaterThanOrEqual(Number(exp.minCell ?? 28));
+      expect(m.boardPx, tag).toBeGreaterThanOrEqual(Number(exp.minBoardPx ?? 280));
+      expect(Math.abs(m.boardPx - m.cell * 10), `${tag} 10×10 board`).toBeLessThanOrEqual(1);
+      expect(m.boardY, tag).toBeGreaterThanOrEqual(0);
+      expect(m.boardX, tag).toBeGreaterThanOrEqual(0);
+      expect(m.boardX + m.boardPx, tag).toBeLessThanOrEqual(vp.width + 2);
+      expect(m.boardY, tag).toBeGreaterThanOrEqual((hud?.height ?? 0) - 8);
+      expect(m.boardY + m.boardPx, tag).toBeLessThanOrEqual((tray?.y ?? 0) + 2);
+      return;
+    }
+    case "trayFullyOnScreen": {
+      const vp = page.viewportSize()!;
+      const tray = await page.getByTestId("tray").boundingBox();
+      expect(tray, tag).toBeTruthy();
+      expect(tray!.y, `${tag} top`).toBeGreaterThanOrEqual(0);
+      expect(tray!.x, `${tag} left`).toBeGreaterThanOrEqual(0);
+      expect(tray!.y + tray!.height, `${tag} bottom`).toBeLessThanOrEqual(vp.height + 1);
+      expect(tray!.x + tray!.width, `${tag} right`).toBeLessThanOrEqual(vp.width + 1);
+      return;
+    }
+    case "wellsAboveHomeBar": {
+      const vp = page.viewportSize()!;
+      const sab = Number(exp.sab ?? 0);
+      for (let i = 0; i < 3; i++) {
+        const well = await page.getByTestId(`tray-slot-${i}`).boundingBox();
+        expect(well, `${tag} slot ${i}`).toBeTruthy();
+        expect(well!.y + well!.height, `${tag} slot ${i} above home-bar`).toBeLessThanOrEqual(
+          vp.height - sab + 2,
+        );
       }
       return;
     }
@@ -167,10 +222,46 @@ async function applyExpect(page: Page, exp: Expectation, caseId: string): Promis
       }
       return;
     }
-    case "cellParity": {
+    case "cellParity":
+    case "cssCellParity": {
       const m = await boardMetrics(page);
-      const p = await pieceMetrics(page, Number(exp.slot));
-      expect(Math.abs(p.cell - m.cell), tag).toBeLessThanOrEqual(Number(exp.maxDelta ?? 2));
+      const maxDelta = Number(exp.maxDelta ?? 2);
+      for (const slot of paritySlots(exp)) {
+        const p = await pieceMetrics(page, slot);
+        expect(Math.abs(p.cell - m.cell), `${tag} slot ${slot}`).toBeLessThanOrEqual(maxDelta);
+      }
+      return;
+    }
+    case "tilesInsideWell": {
+      const slop = Number(exp.slop ?? 2);
+      for (const slot of paritySlots(exp)) {
+        const p = await pieceMetrics(page, slot);
+        expect(p.well && p.tiles.length, `${tag} slot ${slot}`).toBeTruthy();
+        for (const tile of p.tiles) {
+          expect(tile.x, `${tag} slot ${slot} tile x`).toBeGreaterThanOrEqual(p.well!.x - slop);
+          expect(tile.y, `${tag} slot ${slot} tile y`).toBeGreaterThanOrEqual(p.well!.y - slop);
+          expect(tile.x + tile.w, `${tag} slot ${slot} tile right`).toBeLessThanOrEqual(
+            p.well!.x + p.well!.width + slop,
+          );
+          expect(tile.y + tile.h, `${tag} slot ${slot} tile bottom`).toBeLessThanOrEqual(
+            p.well!.y + p.well!.height + slop,
+          );
+        }
+      }
+      return;
+    }
+    case "noShrinkToFit": {
+      const m = await boardMetrics(page);
+      const slot = Number(exp.slot ?? 0);
+      const rows = Number(exp.rows ?? 5);
+      const maxDelta = Number(exp.maxDelta ?? 2);
+      const p = await pieceMetrics(page, slot);
+      expect(p.box, tag).toBeTruthy();
+      expect(p.cell, `${tag} must match board cell (no contain-fit shrink)`).toBeGreaterThanOrEqual(
+        m.cell - maxDelta,
+      );
+      expect(Math.abs(p.cell - m.cell), `${tag} cell parity`).toBeLessThanOrEqual(maxDelta);
+      expect(p.box!.height, `${tag} ${rows}-tall height`).toBeGreaterThanOrEqual(m.cell * rows - 4);
       return;
     }
     case "pieceMinHeight": {
@@ -182,17 +273,23 @@ async function applyExpect(page: Page, exp: Expectation, caseId: string): Promis
     }
     case "pieceUnclipped": {
       const vp = page.viewportSize()!;
-      const p = await pieceMetrics(page, Number(exp.slot));
-      expect(p.box, tag).toBeTruthy();
-      expect(p.box!.y + p.box!.height, tag).toBeLessThanOrEqual(vp.height + 1);
+      const p = await pieceMetrics(page, Number(exp.slot ?? 0));
+      expect(p.box && p.well, tag).toBeTruthy();
+      expect(p.box!.y, `${tag} top`).toBeGreaterThanOrEqual(p.well!.y - 2);
+      expect(p.box!.y + p.box!.height, `${tag} viewport`).toBeLessThanOrEqual(vp.height + 1);
+      expect(p.box!.y + p.box!.height, `${tag} well`).toBeLessThanOrEqual(p.well!.y + p.well!.height + 2);
       return;
     }
     case "squareTiles": {
-      const slots = (exp.slots as number[]) ?? [0, 1, 2];
-      for (const slot of slots) {
+      const maxDelta = Number(exp.maxDelta ?? 1.5);
+      for (const slot of paritySlots({ ...exp, slots: exp.slots ?? [0, 1, 2] })) {
         const p = await pieceMetrics(page, slot);
-        expect(Math.abs(p.tileW - p.tileH), `${tag} slot ${slot}`).toBeLessThanOrEqual(Number(exp.maxDelta ?? 1.5));
-        expect(p.tileW, `${tag} slot ${slot}`).toBeGreaterThan(4);
+        const tiles = p.tiles.length ? p.tiles : [{ w: p.tileW, h: p.tileH, x: 0, y: 0 }];
+        expect(tiles.length, `${tag} slot ${slot} painted tiles`).toBeGreaterThan(0);
+        for (const tile of tiles) {
+          expect(Math.abs(tile.w - tile.h), `${tag} slot ${slot} square`).toBeLessThanOrEqual(maxDelta);
+          expect(tile.w, `${tag} slot ${slot}`).toBeGreaterThan(4);
+        }
       }
       return;
     }
@@ -228,6 +325,18 @@ async function runStep(page: Page, step: Step, c: CaseFile): Promise<void> {
       await page.reload();
       await waitForBoardMetrics(page).catch(() => undefined);
       return;
+    case "emulateSafeArea": {
+      const sat = Number(step.sat ?? 0);
+      const sab = Number(step.sab ?? 0);
+      await page.addStyleTag({
+        content: `:root { --sat: ${sat}px; --sab: ${sab}px; }`,
+      });
+      const vp = page.viewportSize()!;
+      await page.setViewportSize({ width: vp.width, height: vp.height - 1 });
+      await page.setViewportSize(vp);
+      await waitForBoardMetrics(page);
+      return;
+    }
     case "waitFilledTray":
       await waitForFilledTray(page, Number(step.min ?? 1));
       return;

@@ -13,5 +13,9 @@
     },
     { "op": "waitFilledTray", "min": 3 }
   ],
-  "expect": [{ "assert": "cellParity", "slot": 1, "maxDelta": 2 }]
+  "expect": [
+    { "assert": "minCell", "value": 28 },
+    { "assert": "cellParity", "slots": [0, 1], "maxDelta": 2 },
+    { "assert": "cssCellParity", "slots": [0, 1], "maxDelta": 2 }
+  ]
 }

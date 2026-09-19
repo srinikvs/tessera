@@ -36,7 +36,11 @@ npm run test:e2e:pixel   # Pixel 7a project only (412×915)
 npm run test:e2e:desktop # 1280×800 Start smoke (B-desktop-start)
 ```
 
+`npm run test:e2e:pixel` runs **only** the Pixel catalog (`tests/e2e/pixel.catalog.spec.ts`): B7–B13 plus C14–C19. Those cases are registered on the pixel project — they are not `test.skip` placeholders. The desktop project loads `desktop.catalog.spec.ts` (Start smoke only) and does not list C14–C18.
+
 `test:e2e` builds `dist/` and starts `vite preview` at `http://127.0.0.1:4173/tessera/` unless `BASE_URL` is set. Failure screenshots land in `test-results/`.
+
+`tessera-ci` owns C14–C18 on Chromium at 412×915: `gate: "block"`, measurable board/tray/cell/home-bar asserts. A missing or emptied C14–C18 JSON fails `npm test` catalog checks.
 
 ## Live smoke (`BASE_URL`)
 
@@ -54,7 +58,8 @@ Linux Builder agent. Both jobs run the suite **from the git checkout only** — 
 npm ci
 npx playwright install --with-deps chromium
 npm test
-npm run test:e2e
+npm run test:e2e:pixel    # C14–C18 block gates; tessera-ci must run this
+npm run test:e2e          # pixel catalog + desktop Start smoke
 ```
 
 Set `CI=1` so Playwright uses the CI reporter, retries once, and does not reuse an existing preview server. For live playaddatest smoke, export `BASE_URL` to that host’s Tessera path.
@@ -87,6 +92,9 @@ Set `CI=1` so Playwright uses the CI reporter, retries once, and does not reuse 
 
 ## Manual-only (D — do not automate, not in JSON)
 
+C14–C18 home-bar coverage in CI is a CSS `--sab` emulation (34px) plus Chromium 412×915. Still manual:
+
+- Real Pixel 7a / Android Chrome gesture-bar and cutout.
 - iPhone Safari-only visual quirks (dynamic toolbar, `visualViewport` dips, rubber-band).
 - Subjective aesthetics beyond measurable square cells, board/tray cell parity, clip, and mid-gap.
 - Weekly prod / merge greenlights and sign-off rituals.
