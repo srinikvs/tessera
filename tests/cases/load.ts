@@ -55,6 +55,15 @@ export function parseCase(raw: unknown, file: string): CaseFile {
   };
 }
 
+/** Pixel project owns e2e + pixel cases. Desktop only runs viewport:desktop smokes. */
+export function casesForPlaywrightProject(project: "pixel" | "desktop"): CaseFile[] {
+  return loadCases().filter((c) => {
+    if (c.layer === "unit") return false;
+    if (project === "desktop") return c.viewport === "desktop";
+    return (c.layer === "e2e" || c.layer === "pixel") && c.viewport !== "desktop";
+  });
+}
+
 export function loadCases(filter?: { layer?: Layer | Layer[] }): CaseFile[] {
   const files = readdirSync(CASES_DIR)
     .filter((f) => f.endsWith(".json"))

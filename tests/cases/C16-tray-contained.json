@@ -13,5 +13,9 @@
     },
     { "op": "waitFilledTray", "min": 3 }
   ],
-  "expect": [{ "assert": "trayContained", "slots": [0, 1, 2] }]
+  "expect": [
+    { "assert": "filledTray", "min": 3, "equals": 3 },
+    { "assert": "trayContained", "slots": [0, 1, 2] },
+    { "assert": "tilesInsideWell", "slots": [0, 1, 2], "slop": 2 }
+  ]
 }

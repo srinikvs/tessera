@@ -30,7 +30,7 @@ export default defineConfig({
   projects: [
     {
       name: "pixel",
-      testMatch: /catalog\.spec\.ts/,
+      testMatch: /pixel\.catalog\.spec\.ts/,
       use: {
         viewport: { width: 412, height: 915 },
         deviceScaleFactor: 2.625,
@@ -42,7 +42,7 @@ export default defineConfig({
     },
     {
       name: "desktop",
-      testMatch: /catalog\.spec\.ts/,
+      testMatch: /desktop\.catalog\.spec\.ts/,
       use: {
         viewport: { width: 1280, height: 800 },
         isMobile: false,

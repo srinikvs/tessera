@@ -11,14 +11,30 @@
       "board": { "preset": "empty" },
       "tray": ["i5Tall", "square", "i5Wide"]
     },
-    { "op": "waitFilledTray", "min": 3 }
+    { "op": "waitFilledTray", "min": 3 },
+    { "op": "expect", "assert": "viewport", "width": 412, "height": 915 },
+    { "op": "expect", "assert": "visible", "testId": "hud" },
+    { "op": "expect", "assert": "visible", "testId": "tray" },
+    { "op": "expect", "assert": "visible", "testId": "board" },
+    { "op": "expect", "assert": "filledTray", "min": 3, "equals": 3 },
+    {
+      "op": "expect",
+      "assert": "noVerticalClip",
+      "testId": ["hud", "tray", "footer", "tray-slot-0", "tray-slot-1", "tray-slot-2"]
+    },
+    { "op": "expect", "assert": "boardFullyVisible", "minCell": 28, "minBoardPx": 280 },
+    { "op": "expect", "assert": "wellsAboveHomeBar", "sab": 0 },
+    { "op": "emulateSafeArea", "sat": 24, "sab": 34 }
   ],
   "expect": [
     { "assert": "viewport", "width": 412, "height": 915 },
-    { "assert": "visible", "testId": "hud" },
-    { "assert": "visible", "testId": "tray" },
-    { "assert": "inViewport", "testId": ["hud", "tray", "tray-slot-0", "tray-slot-1", "tray-slot-2"] },
-    { "assert": "boardAboveTray", "minCell": 28, "minBoardPx": 280 },
-    { "assert": "minCell", "value": 28 }
+    { "assert": "wellsAboveHomeBar", "sab": 34 },
+    {
+      "assert": "noVerticalClip",
+      "testId": ["hud", "tray", "tray-slot-0", "tray-slot-1", "tray-slot-2"]
+    },
+    { "assert": "boardFullyVisible", "minCell": 28, "minBoardPx": 280 },
+    { "assert": "trayFullyOnScreen" },
+    { "assert": "filledTray", "min": 3, "equals": 3 }
   ]
 }

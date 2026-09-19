@@ -14,8 +14,10 @@
     { "op": "waitFilledTray", "min": 3 }
   ],
   "expect": [
+    { "assert": "viewport", "width": 412, "height": 915 },
     { "assert": "midGap", "min": 8, "max": 320 },
-    { "assert": "inViewport", "testId": ["tray"] },
-    { "assert": "boardAboveTray", "minCell": 28 }
+    { "assert": "trayFullyOnScreen" },
+    { "assert": "boardFullyVisible", "minCell": 28, "minBoardPx": 280 },
+    { "assert": "minCell", "value": 28 }
   ]
 }
